@@ -1,0 +1,49 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36930.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DbMercado.Api", "DbMercado.Api\DbMercado.Api.csproj", "{6345C7B9-8271-4D0E-86BD-5978D41683DF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DbMercado.Application", "DbMercado.Application\DbMercado.Application.csproj", "{4AAF366D-0B2B-438B-A000-578ECA006A79}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DbMercado.CrossCutting", "DbMercado.CrossCutting\DbMercado.CrossCutting.csproj", "{47D74348-4285-4A94-9B0D-DC0015C5585B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DbMercado.Domain", "DbMercado.Domain\DbMercado.Domain.csproj", "{EBC8B66E-F173-49F4-9521-EE1C9246156F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DbMercado.Infrastructure", "DbMercado.Infrastructure\DbMercado.Infrastructure.csproj", "{D880D576-2B3A-47FC-9C3A-3A4E18B6623A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6345C7B9-8271-4D0E-86BD-5978D41683DF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6345C7B9-8271-4D0E-86BD-5978D41683DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6345C7B9-8271-4D0E-86BD-5978D41683DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6345C7B9-8271-4D0E-86BD-5978D41683DF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4AAF366D-0B2B-438B-A000-578ECA006A79}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4AAF366D-0B2B-438B-A000-578ECA006A79}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4AAF366D-0B2B-438B-A000-578ECA006A79}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4AAF366D-0B2B-438B-A000-578ECA006A79}.Release|Any CPU.Build.0 = Release|Any CPU
+		{47D74348-4285-4A94-9B0D-DC0015C5585B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{47D74348-4285-4A94-9B0D-DC0015C5585B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{47D74348-4285-4A94-9B0D-DC0015C5585B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{47D74348-4285-4A94-9B0D-DC0015C5585B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EBC8B66E-F173-49F4-9521-EE1C9246156F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EBC8B66E-F173-49F4-9521-EE1C9246156F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EBC8B66E-F173-49F4-9521-EE1C9246156F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EBC8B66E-F173-49F4-9521-EE1C9246156F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D880D576-2B3A-47FC-9C3A-3A4E18B6623A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D880D576-2B3A-47FC-9C3A-3A4E18B6623A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D880D576-2B3A-47FC-9C3A-3A4E18B6623A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D880D576-2B3A-47FC-9C3A-3A4E18B6623A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A1B2C52F-0EA2-444A-827B-1B45B142510B}
+	EndGlobalSection
+EndGlobal

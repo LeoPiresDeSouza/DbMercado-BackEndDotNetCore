@@ -1,0 +1,185 @@
+# -----------------------------------------------------------------------------
+# Build / .NET
+# -----------------------------------------------------------------------------
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]uild/
+[Ll]og/
+[Ll]ogs/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+**/Generated/**
+
+# NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+*.dotnet-tools.json
+project.assets.json
+*.csproj.EntityFrameworkCore.targets
+
+# Test / cobertura
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.trx
+*.coverage
+*.coveragexml
+coverage*.json
+coverage*.xml
+*.opencover.xml
+BenchmarkDotNet.Artifacts/
+
+# ASP.NET / publicação
+**/wwwroot/dist/
+**/ClientApp/dist/
+**/publish/
+*.Publish.xml
+*.pubxml
+*.pubxml.user
+*.azurePubxml
+*.publishproj
+*.publishsettings
+PublishScripts/
+App_Data/
+
+# -----------------------------------------------------------------------------
+# Visual Studio
+# -----------------------------------------------------------------------------
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+*.VC.db
+*.VC.VC.opendb
+*.opensdf
+*.sdf
+*.dbmdl
+*.dbproj.schemaview
+*.jfm
+*.pfx
+*.publishsettings
+orleans.codegen.cs
+Generated\ Files/
+ServiceFabricBackup/
+*.rptproj.rsuser
+*- [Bb]ackup.rdl
+*- [Bb]ackup ([0-9]).rdl
+*- [Bb]ackup ([0-9][0-9]).rdl
+FakesAssemblies/
+*.GhostDoc.xml
+.axoCover/*
+**/*.DesktopClient/ModelManifest.xml
+**/*.Server/ModelManifest.xml
+_Pvt_Extensions/
+
+# -----------------------------------------------------------------------------
+# JetBrains Rider
+# -----------------------------------------------------------------------------
+.idea/
+*.sln.iml
+*.DotSettings.user
+
+# -----------------------------------------------------------------------------
+# VS Code / Cursor
+# -----------------------------------------------------------------------------
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+.history/
+
+# -----------------------------------------------------------------------------
+# Logs e diagnóstico
+# -----------------------------------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log.*
+
+# -----------------------------------------------------------------------------
+# Node (SPA embutido / ferramentas locais)
+# -----------------------------------------------------------------------------
+node_modules/
+**/node_modules/
+.pnpm-store/
+.yarn/
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# -----------------------------------------------------------------------------
+# Caches diversos
+# -----------------------------------------------------------------------------
+*.tmp
+*.temp
+.cache/
+.parcel-cache/
+.turbo/
+.next/
+.nuxt/
+*.tsbuildinfo
+.eslintcache
+.stylelintcache
+*.swp
+*.swo
+*~
+
+# -----------------------------------------------------------------------------
+# Secrets e configuração local (nunca commitar)
+# -----------------------------------------------------------------------------
+*.pfx
+*.p12
+*.key
+*.pem
+secrets.json
+**/secrets.json
+appsettings.*.local.json
+appsettings.Local.json
+*.Development.local.json
+.env
+.env.*
+!.env.example
+!.env.template
+*.secret
+
+# User-specific / máquina
+*.rsuser
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# -----------------------------------------------------------------------------
+# OS
+# -----------------------------------------------------------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# -----------------------------------------------------------------------------
+# Outros
+# -----------------------------------------------------------------------------
+*.orig
+*.rej
+*.bak
+*.old
+*.mdb
+*.ldb
+local.settings.json

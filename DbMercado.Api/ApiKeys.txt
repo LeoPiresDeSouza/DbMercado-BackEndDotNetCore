@@ -1,0 +1,8 @@
+Openrouter - deepBluesMercado ApiKey
+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
+
+qdrant
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.hLUNSaTL8sgfNvWNd7ewShHwGgh12J_SoWkxLl0GpTQ
+
+google gemini
+AIzaSyBbujf-jyMoSTsUnmgexEU7a7o9BDD56sc
