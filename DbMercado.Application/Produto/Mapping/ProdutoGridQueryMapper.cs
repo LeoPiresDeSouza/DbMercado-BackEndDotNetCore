@@ -14,6 +14,25 @@ public static class ProdutoGridQueryMapper
         "unidadeMedida"
     };
 
+    private static readonly HashSet<string> CamposAgrupamentoPermitidos = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "nome",
+        "marca",
+        "unidadeMedida"
+    };
+
+    /** Colunas que podem ir em Valores com agregação count (mapeia para COUNT no servidor). */
+    private static readonly HashSet<string> CamposValorContagemPermitidos = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "id",
+        "nome",
+        "marca",
+        "unidadeMedida",
+        "ssrmCount_nome",
+        "ssrmCount_marca",
+        "ssrmCount_unidadeMedida"
+    };
+
     public static ProdutoGridSpecification ToSpecification(ProdutoGridQueryDto dto)
     {
         var skip = Math.Max(0, dto.StartRow);
@@ -22,14 +41,79 @@ public static class ProdutoGridQueryMapper
 
         var ordenacao = MapearOrdenacao(dto.SortModel);
         var filtro = MapearFiltros(dto.FilterModel);
+        var camposAgrupamento = MapearCamposAgrupamento(dto.RowGroupCols);
+        var chavesGrupo = dto.GroupKeys?.Where(k => k != null).Select(k => k!).ToList()
+                           ?? new List<string>();
+        var agregarContagemId = MapearAgregarContagemId(dto.ValueCols);
 
         return new ProdutoGridSpecification
         {
             Skip = skip,
             Take = take,
             Ordenacao = ordenacao,
-            Filtro = filtro
+            Filtro = filtro,
+            CamposAgrupamento = camposAgrupamento,
+            ChavesGrupo = chavesGrupo,
+            AgregarContagemId = agregarContagemId
         };
+    }
+
+    private static IReadOnlyList<string> MapearCamposAgrupamento(List<ProdutoGridColumnVoDto>? rowGroupCols)
+    {
+        if (rowGroupCols is not { Count: > 0 })
+            return Array.Empty<string>();
+
+        var lista = new List<string>();
+        foreach (var col in rowGroupCols)
+        {
+            var candidato = string.IsNullOrWhiteSpace(col.Field) ? col.Id : col.Field;
+            var campo = NormalizarCampoAgrupamento(candidato);
+            if (campo is not null)
+                lista.Add(campo);
+        }
+
+        return lista;
+    }
+
+    private static string? NormalizarCampoAgrupamento(string? colId)
+    {
+        if (string.IsNullOrWhiteSpace(colId))
+            return null;
+
+        var c = colId.Trim();
+        return CamposAgrupamentoPermitidos.Contains(c) ? c.ToLowerInvariant() : null;
+    }
+
+    private static bool MapearAgregarContagemId(List<ProdutoGridColumnVoDto>? valueCols)
+    {
+        if (valueCols is not { Count: > 0 })
+            return false;
+
+        foreach (var col in valueCols)
+        {
+            var f = string.IsNullOrWhiteSpace(col.Field) ? col.Id : col.Field;
+            if (string.IsNullOrWhiteSpace(f) || !CamposValorContagemPermitidos.Contains(f.Trim()))
+                continue;
+
+            var fNorm = f.Trim();
+
+            // Medidas só para contagem: não exigir aggFunc == "count" (custom agg / locale / Enterprise).
+            if (fNorm.StartsWith("ssrmCount_", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            // SSRM às vezes envia AggFunc vazio até o utilizador escolher; a colDef usa default count.
+            if (string.IsNullOrWhiteSpace(col.AggFunc))
+                return true;
+
+            if (string.Equals(col.AggFunc, "count", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            // Locale PT do AG Grid usa "Contar" na UI; em alguns fluxos o valor pode refletir o rótulo.
+            if (string.Equals(col.AggFunc, "contar", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 
     private static IReadOnlyList<ProdutoGridOrdenacao> MapearOrdenacao(List<ProdutoGridSortItemDto>? sortModel)

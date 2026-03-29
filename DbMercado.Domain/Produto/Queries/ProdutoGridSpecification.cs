@@ -14,6 +14,15 @@ public sealed class ProdutoGridSpecification
     public IReadOnlyList<ProdutoGridOrdenacao> Ordenacao { get; init; } = Array.Empty<ProdutoGridOrdenacao>();
 
     public ProdutoGridFiltro Filtro { get; init; } = new();
+
+    /// <summary>Campos permitidos para agrupamento, na ordem do painel (SSRM). Vazio = lista plana.</summary>
+    public IReadOnlyList<string> CamposAgrupamento { get; init; } = Array.Empty<string>();
+
+    /// <summary>Chaves do caminho de grupo expandido (uma entrada por nível).</summary>
+    public IReadOnlyList<string> ChavesGrupo { get; init; } = Array.Empty<string>();
+
+    /// <summary>Quando verdadeiro, linhas de grupo preenchem <c>Id</c> com a contagem (painel Valores / agg count).</summary>
+    public bool AgregarContagemId { get; init; }
 }
 
 public sealed class ProdutoGridOrdenacao

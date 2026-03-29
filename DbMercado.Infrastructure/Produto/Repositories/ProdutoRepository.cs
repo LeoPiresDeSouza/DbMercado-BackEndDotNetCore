@@ -76,19 +76,192 @@ public class ProdutoRepository : BaseRepository<ProdutoEntity>, IProdutoReposito
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<(List<ProdutoEntity> Items, int TotalCount)> ConsultarGridAsync(
+    public async Task<(List<ProdutoGridLinhaConsulta> Items, int TotalCount)> ConsultarGridAsync(
         ProdutoGridSpecification spec,
         CancellationToken cancellationToken = default)
     {
         var baseQuery = DbSet.AsNoTracking();
         var filtered = AplicarFiltrosGrid(baseQuery, spec.Filtro);
+
+        if (spec.CamposAgrupamento.Count > 0)
+            return await ConsultarGridAgrupadoAsync(filtered, spec, cancellationToken);
+
         var total = await filtered.CountAsync(cancellationToken);
         var ordered = AplicarOrdenacaoGrid(filtered, spec.Ordenacao);
-        var items = await ordered
+        var entities = await ordered
             .Skip(spec.Skip)
             .Take(spec.Take)
             .ToListAsync(cancellationToken);
-        return (items, total);
+        var linhasPlana = entities
+            .Select(p => new ProdutoGridLinhaConsulta
+            {
+                LinhaDeGrupo = false,
+                Produto = p,
+                ValoresAgrupamento = new Dictionary<string, string>(StringComparer.Ordinal),
+                ContagemFilhosDiretos = 0,
+                ChaveNivelAtual = string.Empty
+            })
+            .ToList();
+        return (linhasPlana, total);
+    }
+
+    private async Task<(List<ProdutoGridLinhaConsulta> Items, int TotalCount)> ConsultarGridAgrupadoAsync(
+        IQueryable<ProdutoEntity> filtered,
+        ProdutoGridSpecification spec,
+        CancellationToken cancellationToken)
+    {
+        var campos = spec.CamposAgrupamento;
+        var keys = spec.ChavesGrupo.ToList();
+        if (keys.Count > campos.Count)
+            keys = keys.Take(campos.Count).ToList();
+
+        var filteredComChaves = AplicarFiltroChavesGrupo(filtered, campos, keys);
+
+        var depth = keys.Count;
+        if (depth < campos.Count)
+        {
+            var campoNivel = campos[depth];
+            return await ListarNivelGrupoAsync(
+                filteredComChaves,
+                campos,
+                keys,
+                campoNivel,
+                spec,
+                cancellationToken);
+        }
+
+        var totalFolhas = await filteredComChaves.CountAsync(cancellationToken);
+        var ordenadoFolhas = AplicarOrdenacaoGrid(filteredComChaves, spec.Ordenacao);
+        var folhas = await ordenadoFolhas
+            .Skip(spec.Skip)
+            .Take(spec.Take)
+            .ToListAsync(cancellationToken);
+        var linhasFolha = folhas
+            .Select(p => new ProdutoGridLinhaConsulta
+            {
+                LinhaDeGrupo = false,
+                Produto = p,
+                ValoresAgrupamento = new Dictionary<string, string>(StringComparer.Ordinal),
+                ContagemFilhosDiretos = 0,
+                ChaveNivelAtual = string.Empty
+            })
+            .ToList();
+        return (linhasFolha, totalFolhas);
+    }
+
+    private static IQueryable<ProdutoEntity> AplicarFiltroChavesGrupo(
+        IQueryable<ProdutoEntity> query,
+        IReadOnlyList<string> camposAgrupamento,
+        IReadOnlyList<string> chavesGrupo)
+    {
+        for (var i = 0; i < chavesGrupo.Count && i < camposAgrupamento.Count; i++)
+        {
+            var campo = camposAgrupamento[i];
+            var chave = chavesGrupo[i] ?? string.Empty;
+            query = campo switch
+            {
+                "marca" => query.Where(p => (p.Marca ?? string.Empty) == chave),
+                "nome" => query.Where(p => p.Nome == chave),
+                "unidadeMedida" => query.Where(p => p.UnidadeMedida == chave),
+                _ => query
+            };
+        }
+
+        return query;
+    }
+
+    private async Task<(List<ProdutoGridLinhaConsulta> Items, int TotalCount)> ListarNivelGrupoAsync(
+        IQueryable<ProdutoEntity> filtered,
+        IReadOnlyList<string> campos,
+        IReadOnlyList<string> chavesPai,
+        string campoNivel,
+        ProdutoGridSpecification spec,
+        CancellationToken cancellationToken)
+    {
+        return campoNivel switch
+        {
+            "marca" => await ListarGrupoPorExpressao(
+                filtered,
+                p => p.Marca ?? string.Empty,
+                campos,
+                chavesPai,
+                "marca",
+                spec,
+                cancellationToken),
+            "nome" => await ListarGrupoPorExpressao(
+                filtered,
+                p => p.Nome,
+                campos,
+                chavesPai,
+                "nome",
+                spec,
+                cancellationToken),
+            "unidadeMedida" => await ListarGrupoPorExpressao(
+                filtered,
+                p => p.UnidadeMedida,
+                campos,
+                chavesPai,
+                "unidadeMedida",
+                spec,
+                cancellationToken),
+            _ => (new List<ProdutoGridLinhaConsulta>(), 0)
+        };
+    }
+
+    private async Task<(List<ProdutoGridLinhaConsulta> Items, int TotalCount)> ListarGrupoPorExpressao(
+        IQueryable<ProdutoEntity> filtered,
+        System.Linq.Expressions.Expression<Func<ProdutoEntity, string>> selectorKey,
+        IReadOnlyList<string> campos,
+        IReadOnlyList<string> chavesPai,
+        string campoNivel,
+        ProdutoGridSpecification spec,
+        CancellationToken cancellationToken)
+    {
+        var agrupado = filtered.GroupBy(selectorKey);
+        var total = await agrupado.CountAsync(cancellationToken);
+        // Projeção anônima: EF Core traduz para GROUP BY + COUNT; tipo nomeado quebrava a tradução.
+        var projetado = agrupado.Select(g => new { Key = g.Key, Cnt = g.Count() });
+        var ord0 = spec.Ordenacao.FirstOrDefault();
+        var ordenado =
+            ord0 != null && string.Equals(ord0.Campo, campoNivel, StringComparison.OrdinalIgnoreCase)
+                ? (ord0.Crescente
+                    ? projetado.OrderBy(x => x.Key)
+                    : projetado.OrderByDescending(x => x.Key))
+                : projetado.OrderBy(x => x.Key);
+
+        var pagina = await ordenado
+            .Skip(spec.Skip)
+            .Take(spec.Take)
+            .ToListAsync(cancellationToken);
+
+        var linhas = new List<ProdutoGridLinhaConsulta>(pagina.Count);
+        foreach (var item in pagina)
+        {
+            var valores = MontarValoresAgrupamento(campos, chavesPai, campoNivel, item.Key);
+            linhas.Add(new ProdutoGridLinhaConsulta
+            {
+                LinhaDeGrupo = true,
+                Produto = null,
+                ValoresAgrupamento = valores,
+                ContagemFilhosDiretos = item.Cnt,
+                ChaveNivelAtual = item.Key
+            });
+        }
+
+        return (linhas, total);
+    }
+
+    private static Dictionary<string, string> MontarValoresAgrupamento(
+        IReadOnlyList<string> campos,
+        IReadOnlyList<string> chavesPai,
+        string campoAtual,
+        string chaveAtual)
+    {
+        var d = new Dictionary<string, string>(StringComparer.Ordinal);
+        for (var i = 0; i < chavesPai.Count && i < campos.Count; i++)
+            d[campos[i]] = chavesPai[i] ?? string.Empty;
+        d[campoAtual] = chaveAtual;
+        return d;
     }
 
     private static IQueryable<ProdutoEntity> AplicarFiltrosGrid(

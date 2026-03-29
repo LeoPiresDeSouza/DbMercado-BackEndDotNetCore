@@ -15,6 +15,18 @@ public class ProdutoGridQueryDto
 
     /// <summary>Objeto <c>filterModel</c> serializado (chaves = colId).</summary>
     public JsonElement? FilterModel { get; set; }
+
+    /// <summary>Metadados SSRM: colunas arrastadas para linhas de grupo.</summary>
+    public List<ProdutoGridColumnVoDto>? RowGroupCols { get; set; }
+
+    /// <summary>Metadados SSRM: caminho de chaves do grupo expandido.</summary>
+    public List<string>? GroupKeys { get; set; }
+
+    /// <summary>Metadados SSRM: colunas de agregação (painel Valores).</summary>
+    public List<ProdutoGridColumnVoDto>? ValueCols { get; set; }
+
+    /// <summary>Metadados SSRM (pivot completo não é suportado nesta API).</summary>
+    public bool PivotMode { get; set; }
 }
 
 public class ProdutoGridSortItemDto

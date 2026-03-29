@@ -5,6 +5,7 @@ using System.Text;
 using DbMercado.Domain.Administracao.Interfaces.Repositories;
 using DbMercado.Domain.Produto.Entities;
 using DbMercado.Domain.Produto.Interfaces.UnitsOfWork;
+using DbMercado.Domain.Produto.Queries;
 using DbMercado.Domain.Produto.ValueObjects;
 using DbMercado.Domain.Shared.Exceptions;
 
@@ -205,19 +206,44 @@ public class ProdutoService : IProdutoService
     {
         ArgumentNullException.ThrowIfNull(query);
         var spec = ProdutoGridQueryMapper.ToSpecification(query);
-        var (items, total) = await _uw.ProdutoRepository.ConsultarGridAsync(spec, cancellationToken);
+        var (linhas, total) = await _uw.ProdutoRepository.ConsultarGridAsync(spec, cancellationToken);
         return new ProdutoGridResultDto
         {
             RowCount = total,
-            Rows = items
-                .Select(p => new ProdutoResumoDto
-                {
-                    Id = p.Id,
-                    Nome = p.Nome,
-                    UnidadeMedida = p.UnidadeMedida,
-                    Marca = p.Marca
-                })
-                .ToList()
+            Rows = linhas.Select(l => MapearLinhaGrid(l, spec.AgregarContagemId)).ToList()
+        };
+    }
+
+    private static ProdutoGridRowDto MapearLinhaGrid(
+        ProdutoGridLinhaConsulta linha,
+        bool agregarContagemId)
+    {
+        if (linha.LinhaDeGrupo)
+        {
+            linha.ValoresAgrupamento.TryGetValue("marca", out var marcaRaw);
+            var marca = string.IsNullOrEmpty(marcaRaw) ? null : marcaRaw;
+            return new ProdutoGridRowDto
+            {
+                IsGroup = true,
+                Id = agregarContagemId ? linha.ContagemFilhosDiretos : null,
+                Nome = linha.ValoresAgrupamento.GetValueOrDefault("nome") ?? string.Empty,
+                UnidadeMedida = linha.ValoresAgrupamento.GetValueOrDefault("unidadeMedida") ?? string.Empty,
+                Marca = marca,
+                ChildCount = linha.ContagemFilhosDiretos,
+                GroupKey = linha.ChaveNivelAtual
+            };
+        }
+
+        var p = linha.Produto!;
+        return new ProdutoGridRowDto
+        {
+            IsGroup = false,
+            Id = p.Id,
+            Nome = p.Nome,
+            UnidadeMedida = p.UnidadeMedida,
+            Marca = p.Marca,
+            ChildCount = 0,
+            GroupKey = string.Empty
         };
     }
 
