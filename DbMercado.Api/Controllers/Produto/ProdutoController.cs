@@ -77,6 +77,18 @@ public class ProdutoController : ControllerBase
         return Ok(lista);
     }
 
+    [HttpPost("consultas/grid")]
+    public async Task<ActionResult<ProdutoGridResultDto>> ConsultarGrid(
+        [FromBody] ProdutoGridQueryDto query,
+        CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var resultado = await _produtoService.ConsultarGridAsync(query, cancellationToken);
+        return Ok(resultado);
+    }
+
     [HttpGet("consultas/por-ncm")]
     public async Task<ActionResult<IReadOnlyList<ProdutoListItemDto>>> BuscarPorNcm(
         [FromQuery] string ncm,

@@ -1,5 +1,6 @@
 using DbMercado.Application.Produto.Dtos;
 using DbMercado.Application.Produto.Interfaces;
+using DbMercado.Application.Produto.Mapping;
 using System.Text;
 using DbMercado.Domain.Administracao.Interfaces.Repositories;
 using DbMercado.Domain.Produto.Entities;
@@ -196,6 +197,28 @@ public class ProdutoService : IProdutoService
                 Marca = p.Marca
             })
             .ToList();
+    }
+
+    public async Task<ProdutoGridResultDto> ConsultarGridAsync(
+        ProdutoGridQueryDto query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        var spec = ProdutoGridQueryMapper.ToSpecification(query);
+        var (items, total) = await _uw.ProdutoRepository.ConsultarGridAsync(spec, cancellationToken);
+        return new ProdutoGridResultDto
+        {
+            RowCount = total,
+            Rows = items
+                .Select(p => new ProdutoResumoDto
+                {
+                    Id = p.Id,
+                    Nome = p.Nome,
+                    UnidadeMedida = p.UnidadeMedida,
+                    Marca = p.Marca
+                })
+                .ToList()
+        };
     }
 
     public async Task<IReadOnlyList<ProdutoListItemDto>> BuscarPorNcmAsync(string ncm, CancellationToken cancellationToken = default)

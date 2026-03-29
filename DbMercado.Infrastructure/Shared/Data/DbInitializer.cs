@@ -3,6 +3,7 @@ using DbMercado.Domain.Produto.Entities;
 using DbMercado.Domain.Produto.ValueObjects;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
@@ -168,8 +169,39 @@ public class DbInitializer
 
     #region Produtos demonstração (seed incremental)
 
-    /// <summary>Prefixo de nome nos itens de demonstração (apenas identificação humana; idempotência é por GTIN fixo por item).</summary>
-    private const string ProdutoSeedMarcadorNome = "[seed] ";
+    /// <summary>Prefixo antigo gravado no <c>Nome</c> em ambientes já semeados antes da remoção do marcador no código.</summary>
+    private const string LegadoSeedPrefixoNome = "[seed] ";
+
+    /// <summary>
+    /// Remove o prefixo legado <c>[seed] </c> dos nomes já persistidos (o seed novo não adiciona mais esse texto).
+    /// </summary>
+    private static void CorrigirNomesProdutosComPrefixoLegadoSeed(AppDbContext context, ILogger logger)
+    {
+        try
+        {
+            var len = LegadoSeedPrefixoNome.Length;
+            var affected = context.Database.ExecuteSqlRaw(
+                "UPDATE prdProduto SET Nome = STUFF(Nome, 1, @prefixLen, N'') WHERE LEFT(Nome, @prefixLen) = @prefix",
+                new SqlParameter("@prefixLen", len),
+                new SqlParameter("@prefix", LegadoSeedPrefixoNome));
+
+            if (affected > 0)
+            {
+                logger.LogInformation(
+                    "Nomes de produto: removido prefixo legado '{Prefix}' de {Count} registro(s) em prdProduto.",
+                    LegadoSeedPrefixoNome.TrimEnd(),
+                    affected);
+            }
+        }
+        catch (SqlException ex) when (ex.Number == 208)
+        {
+            // tabela ainda não existe
+        }
+        catch (Exception ex) when (ContemSqlErroObjetoInvalido(ex))
+        {
+            logger.LogDebug(ex, "Correção de prefixo em prdProduto ignorada (objeto inválido).");
+        }
+    }
 
     /// <summary>
     /// Carga incremental de produtos fictícios (um registro por GTIN, se ainda não existir).
@@ -179,9 +211,11 @@ public class DbInitializer
     {
         try
         {
+            CorrigirNomesProdutosComPrefixoLegadoSeed(context, logger);
+
             AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "7893500030518", () =>
                 ProdutoEntity.Registrar(
-                    nome: $"{ProdutoSeedMarcadorNome}Arroz parboilizado Tio João 1 kg",
+                    nome: "Arroz parboilizado Tio João 1 kg",
                     descricao: "Arroz longo fino tipo 1, embalagem plástica. Dados ilustrativos para ambiente de demonstração.",
                     marca: "Tio João",
                     modelo: "Tipo 1",
@@ -201,7 +235,7 @@ public class DbInitializer
 
             AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "7896048320065", () =>
                 ProdutoEntity.Registrar(
-                    nome: $"{ProdutoSeedMarcadorNome}Azeite extra virgem Andorinha 500 ml",
+                    nome: "Azeite extra virgem Andorinha 500 ml",
                     descricao: "Azeite de oliva extra virgem, vidro. Demonstração — não é oferta comercial.",
                     marca: "Andorinha",
                     modelo: "Extra virgem",
@@ -217,7 +251,7 @@ public class DbInitializer
 
             AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "7891234567890", () =>
                 ProdutoEntity.Registrar(
-                    nome: $"{ProdutoSeedMarcadorNome}Notebook 14\" fictício — importado",
+                    nome: "Notebook 14\" fictício — importado",
                     descricao: "Equipamento de informática para testes de origem IMPORTADO e origem ICMS 1.",
                     marca: "TechDemo",
                     modelo: "Book14-Mock",
@@ -233,7 +267,7 @@ public class DbInitializer
 
             AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "7891000100103", () =>
                 ProdutoEntity.Registrar(
-                    nome: $"{ProdutoSeedMarcadorNome}Detergente líquido limpeza total 500 ml",
+                    nome: "Detergente líquido limpeza total 500 ml",
                     descricao: "Agente de limpeza — caixa com múltiplas unidades (SKU principal por frasco).",
                     marca: "LimpaBem",
                     modelo: "Neutro",
@@ -249,7 +283,7 @@ public class DbInitializer
 
             AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "7896004001234", () =>
                 ProdutoEntity.Registrar(
-                    nome: $"{ProdutoSeedMarcadorNome}Café torrado em grãos especial 250 g",
+                    nome: "Café torrado em grãos especial 250 g",
                     descricao: "Café arábica torrado, acondicionado a vácuo. Peso líquido 250 g (unidade de venda: pacote).",
                     marca: "Café do Cerrado",
                     modelo: "Grãos inteiros",
@@ -262,6 +296,8 @@ public class DbInitializer
                     atributosIniciais: new[] { AtributoProduto.Criar("Torra", "Média"), AtributoProduto.Criar("Safra", "Referência demo") },
                     skusIniciais: new[] { ("CAF-CER-250G", true), ("CAF-CER-250G-ORG", true) },
                     usuarioAuditoria: usuarioCarga));
+
+            AddProdutosDemonstracaoExtrasPaginacao(context, usuarioCarga);
 
             if (context.ChangeTracker.HasChanges())
                 context.SaveChanges();
@@ -301,6 +337,75 @@ public class DbInitializer
             return;
 
         context.Produtos.Add(fabrica());
+    }
+
+    /// <summary>Vinte itens fictícios adicionais (GTINs 7899010000001–20) para exercitar paginação do grid.</summary>
+    private static void AddProdutosDemonstracaoExtrasPaginacao(AppDbContext context, string usuarioCarga)
+    {
+        ReadOnlySpan<string> nomes =
+        [
+            "Leite integral UHT 1 L",
+            "Açúcar cristal 1 kg",
+            "Farinha de trigo tipo 1 1 kg",
+            "Óleo de soja 900 ml",
+            "Macarrão espaguete 500 g",
+            "Molho de tomate tradicional 340 g",
+            "Feijão preto tipo 1 1 kg",
+            "Sal refinado iodado 1 kg",
+            "Vinagre de álcool 750 ml",
+            "Achocolatado em pó 400 g",
+            "Biscoito cream cracker 400 g",
+            "Sardinha em lata 125 g",
+            "Atum em conserva 170 g",
+            "Suco de laranja integral 1 L",
+            "Iogurte natural 170 g",
+            "Queijo minas frescal porção",
+            "Manteiga com sal 200 g",
+            "Papel higiênico folha dupla 30 m",
+            "Sabonete líquido 250 ml",
+            "Shampoo hidratante 350 ml"
+        ];
+
+        ReadOnlySpan<string> marcas =
+        [
+            "Lácteos Demo", "DoceVida", "Moinho Norte", "Soja Mais", "Massas Itália",
+            "Tomate Feliz", "Grãos do Sertão", "Sal do Mar", "Vinagreira", "Chocolate Kids",
+            "Snack Bom", "Peixe Azul", "ConservaFit", "Citros", "Iogurte Vivo",
+            "Queijos Mineiros", "Manteiga Ouro", "HigieneSoft", "Limpeza Total", "Cabelos Lindos"
+        ];
+
+        ReadOnlySpan<string> ncms =
+        [
+            "04012010", "17019900", "11010010", "15079011", "19021100",
+            "20021000", "07133319", "25010011", "22090000", "18069000",
+            "19053100", "16041311", "16041410", "20091200", "04039000",
+            "04061010", "04051000", "48181000", "34013000", "33051000"
+        ];
+
+        for (var i = 0; i < nomes.Length; i++)
+        {
+            var gtin = $"7899010{(i + 1):D6}";
+            var nome = nomes[i];
+            var marca = marcas[i];
+            var ncm = ncms[i];
+            var sku = $"SEED-PAG-{(i + 1):D2}";
+
+            AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, gtin, () =>
+                ProdutoEntity.Registrar(
+                    nome: nome,
+                    descricao: "Item fictício para teste de paginação no grid administrativo.",
+                    marca: marca,
+                    modelo: "Demo",
+                    gtin: gtin,
+                    unidadeMedida: "UN",
+                    dimensaoProduto: null,
+                    dimensaoEmbalagem: DimensaoEmbalagem.Criar(0.08m, 0.12m, 0.16m, 0.45m),
+                    origemProduto: OrigemProduto.Criar("NACIONAL", null),
+                    dadosFiscais: DadosFiscais.Criar(ncm, null, "0"),
+                    atributosIniciais: new[] { AtributoProduto.Criar("Demo", "Paginação grid") },
+                    skusIniciais: new[] { (sku, true) },
+                    usuarioAuditoria: usuarioCarga));
+        }
     }
 
     #endregion Produtos demonstração (seed incremental)

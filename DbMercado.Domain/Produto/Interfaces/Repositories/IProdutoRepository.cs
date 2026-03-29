@@ -1,4 +1,5 @@
 using DbMercado.Domain.Produto.Entities;
+using DbMercado.Domain.Produto.Queries;
 using DbMercado.Domain.Shared.Interfaces.Repositories;
 
 namespace DbMercado.Domain.Produto.Interfaces.Repositories;
@@ -29,4 +30,9 @@ public interface IProdutoRepository : IBaseRepository<ProdutoEntity>
 
     /// <summary>Fragmento de marca (contém, sem diferenciar maiúsculas/minúsculas).</summary>
     Task<List<ProdutoEntity>> BuscarPorMarcaContendoAsync(string marca, CancellationToken cancellationToken = default);
+
+    /// <summary>Lista resumida com total para grid (sem includes; filtros e ordenação no servidor).</summary>
+    Task<(List<ProdutoEntity> Items, int TotalCount)> ConsultarGridAsync(
+        ProdutoGridSpecification spec,
+        CancellationToken cancellationToken = default);
 }

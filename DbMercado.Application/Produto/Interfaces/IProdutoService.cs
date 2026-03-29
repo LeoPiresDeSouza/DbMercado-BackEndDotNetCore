@@ -16,6 +16,8 @@ public interface IProdutoService
 
     Task<IReadOnlyList<ProdutoResumoDto>> ListarAsync(CancellationToken cancellationToken = default);
 
+    Task<ProdutoGridResultDto> ConsultarGridAsync(ProdutoGridQueryDto query, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<ProdutoListItemDto>> BuscarPorNcmAsync(string ncm, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ProdutoListItemDto>> BuscarPorOrigemGeograficaAsync(
