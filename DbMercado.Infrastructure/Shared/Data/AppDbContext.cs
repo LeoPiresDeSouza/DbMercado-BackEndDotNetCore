@@ -1,5 +1,6 @@
 using DbMercado.Domain.Administracao.Entities;
 using DbMercado.Domain.Importacao.Entities;
+using DbMercado.Domain.Produto.Entities;
 using DbMercado.Domain.Shared.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -38,6 +39,9 @@ public class AppDbContext: IdentityDbContext<IdentityUser>
     public DbSet<NotaFiscalEntity> NotasFiscais => Set<NotaFiscalEntity>();
     public DbSet<ItemNotaFiscalEntity> ItensNotaFiscal => Set<ItemNotaFiscalEntity>();
     public DbSet<ProdutoImportadoEntity> ProdutosImportados => Set<ProdutoImportadoEntity>();
+
+    public DbSet<ProdutoEntity> Produtos => Set<ProdutoEntity>();
+    public DbSet<SkuEntity> Skus => Set<SkuEntity>();
 
     
 

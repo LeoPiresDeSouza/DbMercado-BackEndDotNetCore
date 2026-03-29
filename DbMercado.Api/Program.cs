@@ -4,14 +4,20 @@ using DbMercado.Application.Administracao.Interfaces;
 using DbMercado.Application.Administracao.Services;
 using DbMercado.Application.Importacao.Interfaces;
 using DbMercado.Application.Importacao.Services;
+using DbMercado.Application.Produto.Interfaces;
+using DbMercado.Application.Produto.Services;
 using DbMercado.Domain.Shared;
 using DbMercado.CrossCutting.Settings;
+using DbMercado.Domain.Administracao.Interfaces.Repositories;
 using DbMercado.Domain.Administracao.Interfaces.Services.Autenticacao;
 using DbMercado.Domain.Administracao.Interfaces.UnitsOfWork;
 using DbMercado.Domain.Importacao.Interfaces.UnitsOfWork;
+using DbMercado.Domain.Produto.Interfaces.UnitsOfWork;
+using DbMercado.Infrastructure.Administracao.Repositories;
 using DbMercado.Infrastructure.Administracao.Services.Autenticacao;
 using DbMercado.Infrastructure.Administracao.UnitsOfWork;
 using DbMercado.Infrastructure.Importacao.UnitsOfWork;
+using DbMercado.Infrastructure.Produto.UnitsOfWork;
 using DbMercado.Infrastructure.Providers.Logging;
 using DbMercado.Infrastructure.Providers.CEP;
 using DbMercado.Infrastructure.Shared.Data;
@@ -31,6 +37,7 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.OpenApi.Models;
 using System.Diagnostics;
 using System.Text;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -232,6 +239,8 @@ builder.Services.AddCors(options =>
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.ReferenceHandler =
             System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
@@ -304,6 +313,7 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddScoped<IUwAdministracao, UwAdministracao>();
 builder.Services.AddScoped<IUwImportacao, UwImportacao>();
+builder.Services.AddScoped<IUwProduto, UwProduto>();
 
 #endregion Injeção de dependância de repositários
 
@@ -320,6 +330,7 @@ builder.Services.AddScoped<IApplicationCachingFactory, ApplicationCachingFactory
 
 builder.Services.AddTransient(typeof(IApplicationCachingService<>), typeof(ApplicationCachingService<>));
 builder.Services.AddScoped<IRepositoryFactory, RepositoryFactory>();
+builder.Services.AddScoped<IParametroChaveConsultaRepository, ParametroChaveConsultaRepository>();
 
 #endregion Injeção de dependância de repositários
 
@@ -346,6 +357,7 @@ builder.Services.AddScoped<ICepProvider>(sp =>
 
 builder.Services.AddScoped<ICepService, CepService>();
 builder.Services.AddScoped<IImportacaoService, ImportacaoService>();
+builder.Services.AddScoped<IProdutoService, ProdutoService>();
 
 #endregion Injeção de dependência de serviços
 

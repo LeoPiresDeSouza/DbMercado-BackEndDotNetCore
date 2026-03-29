@@ -4,6 +4,7 @@ using DbMercado.Infrastructure.Shared.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DbMercado.Infrastructure.Shared.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260328225230_AddProdutoPersistencia")]
+    partial class AddProdutoPersistencia
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1371,10 +1374,8 @@ namespace DbMercado.Infrastructure.Shared.Migrations
                                 .HasMaxLength(8)
                                 .HasColumnType("nvarchar(8)");
 
-                            b1.Property<string>("Origem")
-                                .IsRequired()
-                                .HasMaxLength(8)
-                                .HasColumnType("nvarchar(8)");
+                            b1.Property<byte>("Origem")
+                                .HasColumnType("tinyint");
 
                             b1.HasKey("ProdutoEntityId");
 
@@ -1447,10 +1448,8 @@ namespace DbMercado.Infrastructure.Shared.Migrations
                                 .HasMaxLength(128)
                                 .HasColumnType("nvarchar(128)");
 
-                            b1.Property<string>("Tipo")
-                                .IsRequired()
-                                .HasMaxLength(32)
-                                .HasColumnType("nvarchar(32)");
+                            b1.Property<int>("Tipo")
+                                .HasColumnType("int");
 
                             b1.HasKey("ProdutoEntityId");
 
