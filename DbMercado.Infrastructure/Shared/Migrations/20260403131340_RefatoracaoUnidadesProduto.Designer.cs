@@ -4,6 +4,7 @@ using DbMercado.Infrastructure.Shared.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DbMercado.Infrastructure.Shared.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260403131340_RefatoracaoUnidadesProduto")]
+    partial class RefatoracaoUnidadesProduto
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -872,65 +875,6 @@ namespace DbMercado.Infrastructure.Shared.Migrations
                     b.ToTable("impProdutoImportado", (string)null);
                 });
 
-            modelBuilder.Entity("DbMercado.Domain.Produto.Entities.CategoriaProdutoEntity", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<bool>("Ativo")
-                        .HasColumnType("bit");
-
-                    b.Property<long?>("CategoriaPaiId")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime>("DataCriacao")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("DataUltimaAlteracao")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Descricao")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<int>("Nivel")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<string>("Slug")
-                        .IsRequired()
-                        .HasMaxLength(160)
-                        .HasColumnType("nvarchar(160)");
-
-                    b.Property<string>("UsuarioCriacao")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("UsuarioUltimaAlteracao")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CategoriaPaiId");
-
-                    b.HasIndex("Nivel");
-
-                    b.HasIndex("Slug")
-                        .IsUnique();
-
-                    b.HasIndex("CategoriaPaiId", "Ativo");
-
-                    b.ToTable("prdCategoria", (string)null);
-                });
-
             modelBuilder.Entity("DbMercado.Domain.Produto.Entities.ProdutoEntity", b =>
                 {
                     b.Property<long>("Id")
@@ -938,9 +882,6 @@ namespace DbMercado.Infrastructure.Shared.Migrations
                         .HasColumnType("bigint");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<long?>("CategoriaProdutoId")
-                        .HasColumnType("bigint");
 
                     b.Property<DateTime>("DataCriacao")
                         .HasColumnType("datetime2");
@@ -994,8 +935,6 @@ namespace DbMercado.Infrastructure.Shared.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CategoriaProdutoId");
 
                     b.ToTable("prdProduto", (string)null);
                 });
@@ -1429,23 +1368,8 @@ namespace DbMercado.Infrastructure.Shared.Migrations
                     b.Navigation("ItemNotaFiscalOrigem");
                 });
 
-            modelBuilder.Entity("DbMercado.Domain.Produto.Entities.CategoriaProdutoEntity", b =>
-                {
-                    b.HasOne("DbMercado.Domain.Produto.Entities.CategoriaProdutoEntity", "CategoriaPai")
-                        .WithMany("Subcategorias")
-                        .HasForeignKey("CategoriaPaiId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("CategoriaPai");
-                });
-
             modelBuilder.Entity("DbMercado.Domain.Produto.Entities.ProdutoEntity", b =>
                 {
-                    b.HasOne("DbMercado.Domain.Produto.Entities.CategoriaProdutoEntity", "CategoriaProduto")
-                        .WithMany()
-                        .HasForeignKey("CategoriaProdutoId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.OwnsOne("DbMercado.Domain.Produto.ValueObjects.DadosFiscais", "DadosFiscais", b1 =>
                         {
                             b1.Property<long>("ProdutoEntityId")
@@ -1529,16 +1453,7 @@ namespace DbMercado.Infrastructure.Shared.Migrations
                                 .HasPrecision(18, 4)
                                 .HasColumnType("decimal(18,4)");
 
-                            b1.Property<decimal>("Peso")
-                                .HasPrecision(18, 4)
-                                .HasColumnType("decimal(18,4)");
-
                             b1.Property<string>("UnidadeDimensao")
-                                .IsRequired()
-                                .HasMaxLength(8)
-                                .HasColumnType("nvarchar(8)");
-
-                            b1.Property<string>("UnidadePeso")
                                 .IsRequired()
                                 .HasMaxLength(8)
                                 .HasColumnType("nvarchar(8)");
@@ -1605,8 +1520,6 @@ namespace DbMercado.Infrastructure.Shared.Migrations
                         });
 
                     b.Navigation("Atributos");
-
-                    b.Navigation("CategoriaProduto");
 
                     b.Navigation("DadosFiscais")
                         .IsRequired();
@@ -1710,11 +1623,6 @@ namespace DbMercado.Infrastructure.Shared.Migrations
             modelBuilder.Entity("DbMercado.Domain.Importacao.Entities.NotaFiscalEntity", b =>
                 {
                     b.Navigation("Itens");
-                });
-
-            modelBuilder.Entity("DbMercado.Domain.Produto.Entities.CategoriaProdutoEntity", b =>
-                {
-                    b.Navigation("Subcategorias");
                 });
 
             modelBuilder.Entity("DbMercado.Domain.Produto.Entities.ProdutoEntity", b =>

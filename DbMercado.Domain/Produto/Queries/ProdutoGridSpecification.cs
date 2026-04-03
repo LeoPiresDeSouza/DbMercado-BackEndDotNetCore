@@ -23,6 +23,12 @@ public sealed class ProdutoGridSpecification
 
     /// <summary>Quando verdadeiro, linhas de grupo preenchem <c>Id</c> com a contagem (painel Valores / agg count).</summary>
     public bool AgregarContagemId { get; init; }
+
+    /// <summary>Filtro opcional do painel (categoria + descendentes).</summary>
+    public long? CategoriaIdFiltro { get; init; }
+
+    /// <summary>Filtro opcional do painel: rótulos <c>NACIONAL</c> / <c>IMPORTADO</c> ou códigos <c>1</c> / <c>2</c>.</summary>
+    public string? OrigemFiltro { get; init; }
 }
 
 public sealed class ProdutoGridOrdenacao

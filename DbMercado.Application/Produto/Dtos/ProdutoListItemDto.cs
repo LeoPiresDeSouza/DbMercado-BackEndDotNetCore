@@ -15,7 +15,11 @@ public class ProdutoListItemDto
 
     public string? Gtin { get; set; }
 
-    public string UnidadeMedida { get; set; } = string.Empty;
+    public string UnidadeComercializacao { get; set; } = string.Empty;
+
+    public string UnidadeMedidaFisica { get; set; } = string.Empty;
+
+    public string TipoEmbalagem { get; set; } = string.Empty;
 
     public string Ncm { get; set; } = string.Empty;
 

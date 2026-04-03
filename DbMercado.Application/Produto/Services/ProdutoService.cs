@@ -22,6 +22,66 @@ public class ProdutoService : IProdutoService
         _parametrosConsulta = parametrosConsulta;
     }
 
+    public async Task<IReadOnlyList<ProdutoUnidadeMedidaOpcaoDto>> ListarUnidadesComercializacaoAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var itens = await _parametrosConsulta.ListarPorCategoriaEAtributoAsync(
+            ProdutoParametrosCatalogo.Categoria,
+            ProdutoParametrosCatalogo.AtributoUnidadeComercializacao,
+            cancellationToken);
+        return itens.Select(i => new ProdutoUnidadeMedidaOpcaoDto(i.Chave, i.Valor)).ToList();
+    }
+
+    public async Task<IReadOnlyList<ProdutoUnidadeMedidaOpcaoDto>> ListarUnidadesMedidaAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var itens = await _parametrosConsulta.ListarPorCategoriaEAtributoAsync(
+            ProdutoParametrosCatalogo.Categoria,
+            ProdutoParametrosCatalogo.AtributoUnidadeMedida,
+            cancellationToken);
+        return itens.Select(i => new ProdutoUnidadeMedidaOpcaoDto(i.Chave, i.Valor)).ToList();
+    }
+
+    public async Task<IReadOnlyList<ProdutoUnidadeMedidaOpcaoDto>> ListarTiposEmbalagemAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var itens = await _parametrosConsulta.ListarPorCategoriaEAtributoAsync(
+            ProdutoParametrosCatalogo.Categoria,
+            ProdutoParametrosCatalogo.AtributoUnidadeEmbalagem,
+            cancellationToken);
+        return itens.Select(i => new ProdutoUnidadeMedidaOpcaoDto(i.Chave, i.Valor)).ToList();
+    }
+
+    public async Task<IReadOnlyList<ProdutoUnidadeMedidaOpcaoDto>> ListarUnidadesDimensaoAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var itens = await _parametrosConsulta.ListarPorCategoriaEAtributoAsync(
+            ProdutoParametrosCatalogo.Categoria,
+            ProdutoParametrosCatalogo.AtributoUnidadeDimensao,
+            cancellationToken);
+        return itens.Select(i => new ProdutoUnidadeMedidaOpcaoDto(i.Chave, i.Valor)).ToList();
+    }
+
+    public async Task<IReadOnlyList<ProdutoUnidadeMedidaOpcaoDto>> ListarUnidadesPesoAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var itens = await _parametrosConsulta.ListarPorCategoriaEAtributoAsync(
+            ProdutoParametrosCatalogo.Categoria,
+            ProdutoParametrosCatalogo.AtributoUnidadePeso,
+            cancellationToken);
+        return itens.Select(i => new ProdutoUnidadeMedidaOpcaoDto(i.Chave, i.Valor)).ToList();
+    }
+
+    public async Task<IReadOnlyList<ProdutoUnidadeMedidaOpcaoDto>> ListarOrigensGeograficasAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var itens = await _parametrosConsulta.ListarPorCategoriaEAtributoAsync(
+            ProdutoParametrosCatalogo.Categoria,
+            ProdutoParametrosCatalogo.AtributoOrigemGeografica,
+            cancellationToken);
+        return itens.Select(i => new ProdutoUnidadeMedidaOpcaoDto(i.Chave, i.Valor)).ToList();
+    }
+
     public async Task<long> CriarProdutoAsync(string usuarioAutenticado, ProdutoCreateDto dto, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dto);
@@ -30,11 +90,7 @@ public class ProdutoService : IProdutoService
         ArgumentNullException.ThrowIfNull(dto.DimensaoEmbalagem);
         ArgumentException.ThrowIfNullOrWhiteSpace(usuarioAutenticado);
 
-        await ValidarCatalogoProdutoAsync(
-            dto.UnidadeMedida,
-            dto.OrigemGeografica.Tipo,
-            dto.DadosFiscais.Origem,
-            cancellationToken);
+        await ValidarCatalogoProdutoAsync(dto, cancellationToken);
 
         var origem = OrigemProduto.Criar(dto.OrigemGeografica.Tipo, dto.OrigemGeografica.PaisOrigem);
         var dadosFiscais = DadosFiscais.Criar(dto.DadosFiscais.Ncm, dto.DadosFiscais.Cest, dto.DadosFiscais.Origem);
@@ -42,14 +98,19 @@ public class ProdutoService : IProdutoService
             dto.DimensaoEmbalagem.Altura,
             dto.DimensaoEmbalagem.Largura,
             dto.DimensaoEmbalagem.Comprimento,
-            dto.DimensaoEmbalagem.Peso);
+            dto.DimensaoEmbalagem.Peso,
+            dto.DimensaoEmbalagem.UnidadeDimensao,
+            dto.DimensaoEmbalagem.UnidadePeso);
         DimensaoProduto? dimProduto = null;
         if (dto.DimensaoProduto is not null)
         {
             dimProduto = DimensaoProduto.Criar(
                 dto.DimensaoProduto.Altura,
                 dto.DimensaoProduto.Largura,
-                dto.DimensaoProduto.Comprimento);
+                dto.DimensaoProduto.Comprimento,
+                dto.DimensaoProduto.Peso,
+                dto.DimensaoProduto.UnidadeDimensao,
+                dto.DimensaoProduto.UnidadePeso);
         }
 
         IEnumerable<AtributoProduto>? atributos = null;
@@ -66,13 +127,16 @@ public class ProdutoService : IProdutoService
             dto.Marca,
             dto.Modelo,
             dto.Gtin,
-            dto.UnidadeMedida,
+            dto.UnidadeComercializacao,
+            dto.UnidadeMedidaFisica,
+            dto.TipoEmbalagem,
             dimProduto,
             embalagem,
             origem,
             dadosFiscais,
             atributos,
             skus,
+            dto.CategoriaProdutoId,
             usuarioAutenticado);
 
         await _uw.ProdutoRepository.AddAsync(usuarioAutenticado, entidade);
@@ -88,11 +152,7 @@ public class ProdutoService : IProdutoService
         ArgumentNullException.ThrowIfNull(dto.DimensaoEmbalagem);
         ArgumentException.ThrowIfNullOrWhiteSpace(usuarioAutenticado);
 
-        await ValidarCatalogoProdutoAsync(
-            dto.UnidadeMedida,
-            dto.OrigemGeografica.Tipo,
-            dto.DadosFiscais.Origem,
-            cancellationToken);
+        await ValidarCatalogoProdutoAsync(dto, cancellationToken);
 
         var entidade = await _uw.ProdutoRepository.GetByIdCompletoAsync(id, rastrear: true, cancellationToken);
         if (entidade is null)
@@ -105,7 +165,9 @@ public class ProdutoService : IProdutoService
             dto.Marca,
             dto.Modelo,
             dto.Gtin,
-            dto.UnidadeMedida,
+            dto.UnidadeComercializacao,
+            dto.UnidadeMedidaFisica,
+            dto.TipoEmbalagem,
             origem,
             usuarioAutenticado);
 
@@ -115,14 +177,19 @@ public class ProdutoService : IProdutoService
             dimProduto = DimensaoProduto.Criar(
                 dto.DimensaoProduto.Altura,
                 dto.DimensaoProduto.Largura,
-                dto.DimensaoProduto.Comprimento);
+                dto.DimensaoProduto.Comprimento,
+                dto.DimensaoProduto.Peso,
+                dto.DimensaoProduto.UnidadeDimensao,
+                dto.DimensaoProduto.UnidadePeso);
         }
 
         var embalagem = DimensaoEmbalagem.Criar(
             dto.DimensaoEmbalagem.Altura,
             dto.DimensaoEmbalagem.Largura,
             dto.DimensaoEmbalagem.Comprimento,
-            dto.DimensaoEmbalagem.Peso);
+            dto.DimensaoEmbalagem.Peso,
+            dto.DimensaoEmbalagem.UnidadeDimensao,
+            dto.DimensaoEmbalagem.UnidadePeso);
         entidade.AtualizarDimensoes(dimProduto, embalagem, usuarioAutenticado);
 
         var dadosFiscais = DadosFiscais.Criar(dto.DadosFiscais.Ncm, dto.DadosFiscais.Cest, dto.DadosFiscais.Origem);
@@ -133,6 +200,8 @@ public class ProdutoService : IProdutoService
 
         var skus = dto.Skus.Select(s => (s.Codigo, s.Ativo)).ToList();
         entidade.SincronizarSkus(skus, usuarioAutenticado);
+
+        entidade.AlterarCategoria(dto.CategoriaProdutoId, usuarioAutenticado);
 
         await _uw.SaveChangesAsync(cancellationToken);
     }
@@ -168,7 +237,10 @@ public class ProdutoService : IProdutoService
             {
                 Altura = entidade.DimensaoProduto.Altura,
                 Largura = entidade.DimensaoProduto.Largura,
-                Comprimento = entidade.DimensaoProduto.Comprimento
+                Comprimento = entidade.DimensaoProduto.Comprimento,
+                Peso = entidade.DimensaoProduto.Peso,
+                UnidadeDimensao = entidade.DimensaoProduto.UnidadeDimensao,
+                UnidadePeso = entidade.DimensaoProduto.UnidadePeso
             };
         }
 
@@ -180,9 +252,13 @@ public class ProdutoService : IProdutoService
                 Altura = entidade.DimensaoEmbalagem.Altura,
                 Largura = entidade.DimensaoEmbalagem.Largura,
                 Comprimento = entidade.DimensaoEmbalagem.Comprimento,
-                Peso = entidade.DimensaoEmbalagem.Peso
+                Peso = entidade.DimensaoEmbalagem.Peso,
+                UnidadeDimensao = entidade.DimensaoEmbalagem.UnidadeDimensao,
+                UnidadePeso = entidade.DimensaoEmbalagem.UnidadePeso
             },
-            UnidadeMedida = entidade.UnidadeMedida
+            UnidadeComercializacao = entidade.UnidadeComercializacao,
+            UnidadeMedidaFisica = entidade.UnidadeMedidaFisica,
+            TipoEmbalagem = entidade.TipoEmbalagem
         };
     }
 
@@ -194,7 +270,9 @@ public class ProdutoService : IProdutoService
             {
                 Id = p.Id,
                 Nome = p.Nome,
-                UnidadeMedida = p.UnidadeMedida,
+                UnidadeComercializacao = p.UnidadeComercializacao,
+                UnidadeMedidaFisica = p.UnidadeMedidaFisica,
+                TipoEmbalagem = p.TipoEmbalagem,
                 Marca = p.Marca
             })
             .ToList();
@@ -222,13 +300,18 @@ public class ProdutoService : IProdutoService
         {
             linha.ValoresAgrupamento.TryGetValue("marca", out var marcaRaw);
             var marca = string.IsNullOrEmpty(marcaRaw) ? null : marcaRaw;
+            var uFis = linha.ValoresAgrupamento.GetValueOrDefault("unidadeMedida") ?? string.Empty;
             return new ProdutoGridRowDto
             {
                 IsGroup = true,
                 Id = agregarContagemId ? linha.ContagemFilhosDiretos : null,
                 Nome = linha.ValoresAgrupamento.GetValueOrDefault("nome") ?? string.Empty,
-                UnidadeMedida = linha.ValoresAgrupamento.GetValueOrDefault("unidadeMedida") ?? string.Empty,
+                UnidadeComercializacao = string.Empty,
+                UnidadeMedidaFisica = uFis,
+                TipoEmbalagem = string.Empty,
                 Marca = marca,
+                CategoriaNome = null,
+                CategoriaSlug = null,
                 ChildCount = linha.ContagemFilhosDiretos,
                 GroupKey = linha.ChaveNivelAtual
             };
@@ -240,8 +323,12 @@ public class ProdutoService : IProdutoService
             IsGroup = false,
             Id = p.Id,
             Nome = p.Nome,
-            UnidadeMedida = p.UnidadeMedida,
+            UnidadeComercializacao = p.UnidadeComercializacao,
+            UnidadeMedidaFisica = p.UnidadeMedidaFisica,
+            TipoEmbalagem = p.TipoEmbalagem,
             Marca = p.Marca,
+            CategoriaNome = p.CategoriaProduto?.Nome,
+            CategoriaSlug = p.CategoriaProduto?.Slug,
             ChildCount = 0,
             GroupKey = string.Empty
         };
@@ -283,7 +370,18 @@ public class ProdutoService : IProdutoService
         if (string.IsNullOrWhiteSpace(unidadeMedida))
             throw new BusinessException("PRODUTO_CONSULTA_UNIDADE_OBRIGATORIA", "Unidade de medida é obrigatória na consulta.");
 
-        var lista = await _uw.ProdutoRepository.BuscarPorUnidadeMedidaAsync(unidadeMedida.Trim(), cancellationToken);
+        var unidade = NormalizarCodigoParametro(
+            unidadeMedida,
+            "PRODUTO_CONSULTA_UNIDADE_OBRIGATORIA",
+            "Unidade de medida é obrigatória na consulta.");
+        if (!await _parametrosConsulta.ExisteChaveAsync(
+                ProdutoParametrosCatalogo.Categoria,
+                ProdutoParametrosCatalogo.AtributoUnidadeMedida,
+                unidade,
+                cancellationToken))
+            throw new BusinessException("PRODUTO_UNIDADE_MEDIDA_CATALOGO", $"Unidade de medida física '{unidade}' não está cadastrada nos parâmetros.");
+
+        var lista = await _uw.ProdutoRepository.BuscarPorUnidadeMedidaAsync(unidade, cancellationToken);
         return lista.Select(MapearListItem).ToList();
     }
 
@@ -298,23 +396,93 @@ public class ProdutoService : IProdutoService
     }
 
     private async Task ValidarCatalogoProdutoAsync(
-        string unidadeMedida,
-        string tipoOrigemGeografica,
-        string origemIcms,
+        ProdutoCreateDto dto,
         CancellationToken cancellationToken)
     {
-        var unidade = CodigoUnidadeMedidaProduto.Criar(unidadeMedida).Codigo;
+        var com = NormalizarCodigoParametro(
+            dto.UnidadeComercializacao,
+            "PRODUTO_UNIDADE_COMERCIALIZACAO_OBRIGATORIA",
+            "Unidade de comercialização é obrigatória.");
+        if (!await _parametrosConsulta.ExisteChaveAsync(
+                ProdutoParametrosCatalogo.Categoria,
+                ProdutoParametrosCatalogo.AtributoUnidadeComercializacao,
+                com,
+                cancellationToken))
+            throw new BusinessException("PRODUTO_UNIDADE_COMERCIALIZACAO_CATALOGO", $"Unidade de comercialização '{com}' não está cadastrada nos parâmetros.");
+
+        var fis = NormalizarCodigoParametro(
+            dto.UnidadeMedidaFisica,
+            "PRODUTO_UNIDADE_MEDIDA_OBRIGATORIA",
+            "Unidade de medida física é obrigatória.");
         if (!await _parametrosConsulta.ExisteChaveAsync(
                 ProdutoParametrosCatalogo.Categoria,
                 ProdutoParametrosCatalogo.AtributoUnidadeMedida,
-                unidade,
+                fis,
                 cancellationToken))
-            throw new BusinessException("PRODUTO_UNIDADE_MEDIDA_CATALOGO", $"Unidade de medida '{unidade}' não está cadastrada nos parâmetros.");
+            throw new BusinessException("PRODUTO_UNIDADE_MEDIDA_CATALOGO", $"Unidade de medida física '{fis}' não está cadastrada nos parâmetros.");
 
-        if (string.IsNullOrWhiteSpace(tipoOrigemGeografica))
+        var emb = NormalizarCodigoParametro(
+            dto.TipoEmbalagem,
+            "PRODUTO_TIPO_EMBALAGEM_OBRIGATORIO",
+            "Tipo de embalagem é obrigatório.");
+        if (!await _parametrosConsulta.ExisteChaveAsync(
+                ProdutoParametrosCatalogo.Categoria,
+                ProdutoParametrosCatalogo.AtributoUnidadeEmbalagem,
+                emb,
+                cancellationToken))
+            throw new BusinessException("PRODUTO_TIPO_EMBALAGEM_CATALOGO", $"Tipo de embalagem '{emb}' não está cadastrado nos parâmetros.");
+
+        var dimEmb = NormalizarCodigoParametro(
+            dto.DimensaoEmbalagem.UnidadeDimensao,
+            "EMBALAGEM_UNIDADE_DIMENSAO_OBRIGATORIA",
+            "Unidade das dimensões da embalagem é obrigatória.");
+        if (!await _parametrosConsulta.ExisteChaveAsync(
+                ProdutoParametrosCatalogo.Categoria,
+                ProdutoParametrosCatalogo.AtributoUnidadeDimensao,
+                dimEmb,
+                cancellationToken))
+            throw new BusinessException("PRODUTO_EMBALAGEM_UNIDADE_DIMENSAO_CATALOGO", $"Unidade de dimensão '{dimEmb}' não está cadastrada nos parâmetros.");
+
+        var pesoEmb = NormalizarCodigoParametro(
+            dto.DimensaoEmbalagem.UnidadePeso,
+            "EMBALAGEM_UNIDADE_PESO_OBRIGATORIA",
+            "Unidade de peso da embalagem é obrigatória.");
+        if (!await _parametrosConsulta.ExisteChaveAsync(
+                ProdutoParametrosCatalogo.Categoria,
+                ProdutoParametrosCatalogo.AtributoUnidadePeso,
+                pesoEmb,
+                cancellationToken))
+            throw new BusinessException("PRODUTO_EMBALAGEM_UNIDADE_PESO_CATALOGO", $"Unidade de peso '{pesoEmb}' não está cadastrada nos parâmetros.");
+
+        if (dto.DimensaoProduto is not null)
+        {
+            var dimP = NormalizarCodigoParametro(
+                dto.DimensaoProduto.UnidadeDimensao,
+                "PRODUTO_DIMENSAO_UNIDADE_OBRIGATORIA",
+                "Unidade das dimensões do produto é obrigatória.");
+            if (!await _parametrosConsulta.ExisteChaveAsync(
+                    ProdutoParametrosCatalogo.Categoria,
+                    ProdutoParametrosCatalogo.AtributoUnidadeDimensao,
+                    dimP,
+                    cancellationToken))
+                throw new BusinessException("PRODUTO_DIMENSAO_UNIDADE_CATALOGO", $"Unidade de dimensão '{dimP}' não está cadastrada nos parâmetros.");
+
+            var pesoP = NormalizarCodigoParametro(
+                dto.DimensaoProduto.UnidadePeso,
+                "PRODUTO_DIMENSAO_UNIDADE_PESO_OBRIGATORIA",
+                "Unidade de peso do produto é obrigatória.");
+            if (!await _parametrosConsulta.ExisteChaveAsync(
+                    ProdutoParametrosCatalogo.Categoria,
+                    ProdutoParametrosCatalogo.AtributoUnidadePeso,
+                    pesoP,
+                    cancellationToken))
+                throw new BusinessException("PRODUTO_DIMENSAO_UNIDADE_PESO_CATALOGO", $"Unidade de peso '{pesoP}' não está cadastrada nos parâmetros.");
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.OrigemGeografica.Tipo))
             throw new BusinessException("PRODUTO_ORIGEM_GEOGRAFICA_OBRIGATORIA", "Tipo de origem geográfica é obrigatório.");
 
-        var tipoGeo = tipoOrigemGeografica.Trim().ToUpperInvariant();
+        var tipoGeo = dto.OrigemGeografica.Tipo.Trim().ToUpperInvariant();
         if (!await _parametrosConsulta.ExisteChaveAsync(
                 ProdutoParametrosCatalogo.Categoria,
                 ProdutoParametrosCatalogo.AtributoOrigemGeografica,
@@ -322,16 +490,43 @@ public class ProdutoService : IProdutoService
                 cancellationToken))
             throw new BusinessException("PRODUTO_ORIGEM_GEOGRAFICA_CATALOGO", $"Tipo de origem geográfica '{tipoGeo}' não está cadastrado nos parâmetros.");
 
-        if (string.IsNullOrWhiteSpace(origemIcms))
+        if (string.IsNullOrWhiteSpace(dto.DadosFiscais.Origem))
             throw new BusinessException("PRODUTO_ORIGEM_ICMS_OBRIGATORIA", "Origem ICMS é obrigatória.");
 
-        var origem = origemIcms.Trim();
+        var origem = dto.DadosFiscais.Origem.Trim();
         if (!await _parametrosConsulta.ExisteChaveAsync(
                 ProdutoParametrosCatalogo.Categoria,
                 ProdutoParametrosCatalogo.AtributoOrigemIcms,
                 origem,
                 cancellationToken))
             throw new BusinessException("PRODUTO_ORIGEM_ICMS_CATALOGO", $"Origem ICMS '{origem}' não está cadastrada nos parâmetros.");
+
+        if (dto.CategoriaProdutoId is { } cid)
+        {
+            var cat = await _uw.Categorias.ObterPorIdAsync(cid, cancellationToken);
+            if (cat is null)
+                throw new BusinessException("PRODUTO_CATEGORIA_NAO_ENCONTRADA", "Categoria de produto informada não existe.");
+            if (!cat.Ativo)
+                throw new BusinessException("PRODUTO_CATEGORIA_INATIVA", "Não é possível vincular produto a uma categoria inativa.");
+        }
+    }
+
+    private static string NormalizarCodigoParametro(string codigo, string errorCode, string errorMessage)
+    {
+        if (string.IsNullOrWhiteSpace(codigo))
+            throw new BusinessException(errorCode, errorMessage);
+
+        var c = codigo.Trim().ToUpperInvariant();
+        if (c.Length == 0 || c.Length > 16)
+            throw new BusinessException(errorCode, errorMessage).With("CodigoInformado", codigo);
+
+        foreach (var ch in c.AsSpan())
+        {
+            if (!char.IsLetterOrDigit(ch))
+                throw new BusinessException(errorCode, errorMessage).With("CodigoInformado", codigo);
+        }
+
+        return c;
     }
 
     private static ProdutoListItemDto MapearListItem(ProdutoEntity p) =>
@@ -342,7 +537,9 @@ public class ProdutoService : IProdutoService
             Marca = p.Marca,
             Modelo = p.Modelo,
             Gtin = p.Gtin,
-            UnidadeMedida = p.UnidadeMedida,
+            UnidadeComercializacao = p.UnidadeComercializacao,
+            UnidadeMedidaFisica = p.UnidadeMedidaFisica,
+            TipoEmbalagem = p.TipoEmbalagem,
             Ncm = p.DadosFiscais.Ncm,
             OrigemGeograficaTipo = p.OrigemProduto.Tipo,
             OrigemGeograficaPais = p.OrigemProduto.PaisOrigem
@@ -369,9 +566,15 @@ public class ProdutoService : IProdutoService
             {
                 Altura = p.DimensaoProduto.Altura,
                 Largura = p.DimensaoProduto.Largura,
-                Comprimento = p.DimensaoProduto.Comprimento
+                Comprimento = p.DimensaoProduto.Comprimento,
+                Peso = p.DimensaoProduto.Peso,
+                UnidadeDimensao = p.DimensaoProduto.UnidadeDimensao,
+                UnidadePeso = p.DimensaoProduto.UnidadePeso
             };
         }
+
+        var cat = p.CategoriaProduto;
+        var caminho = MontarCaminhoCategoria(cat);
 
         return new ProdutoResponseDto
         {
@@ -381,7 +584,13 @@ public class ProdutoService : IProdutoService
             Marca = p.Marca,
             Modelo = p.Modelo,
             Gtin = p.Gtin,
-            UnidadeMedida = p.UnidadeMedida,
+            CategoriaProdutoId = p.CategoriaProdutoId,
+            CategoriaNome = cat?.Nome,
+            CategoriaSlug = cat?.Slug,
+            CategoriaCaminho = caminho,
+            UnidadeComercializacao = p.UnidadeComercializacao,
+            UnidadeMedidaFisica = p.UnidadeMedidaFisica,
+            TipoEmbalagem = p.TipoEmbalagem,
             OrigemGeograficaTipo = p.OrigemProduto.Tipo,
             OrigemGeograficaPais = p.OrigemProduto.PaisOrigem,
             DadosFiscais = new ProdutoDadosFiscaisDto
@@ -396,7 +605,9 @@ public class ProdutoService : IProdutoService
                 Altura = p.DimensaoEmbalagem.Altura,
                 Largura = p.DimensaoEmbalagem.Largura,
                 Comprimento = p.DimensaoEmbalagem.Comprimento,
-                Peso = p.DimensaoEmbalagem.Peso
+                Peso = p.DimensaoEmbalagem.Peso,
+                UnidadeDimensao = p.DimensaoEmbalagem.UnidadeDimensao,
+                UnidadePeso = p.DimensaoEmbalagem.UnidadePeso
             },
             Skus = p.Skus
                 .OrderBy(s => s.Id)
@@ -411,5 +622,17 @@ public class ProdutoService : IProdutoService
                 .Select(a => new ProdutoAtributoDto { Nome = a.Nome, Valor = a.Valor })
                 .ToList()
         };
+    }
+
+    private static IReadOnlyList<string> MontarCaminhoCategoria(CategoriaProdutoEntity? no)
+    {
+        if (no is null)
+            return Array.Empty<string>();
+
+        var nomes = new List<string>();
+        for (CategoriaProdutoEntity? c = no; c is not null; c = c.CategoriaPai)
+            nomes.Insert(0, c.Nome);
+
+        return nomes;
     }
 }

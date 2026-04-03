@@ -13,6 +13,8 @@ public class UwProduto : IUwProduto
 
     private IProdutoRepository? _produtoRepository;
 
+    private ICategoriaProdutoRepository? _categorias;
+
     public UwProduto(AppDbContext context, IRepositoryFactory repoFactory)
     {
         _context = context;
@@ -21,6 +23,9 @@ public class UwProduto : IUwProduto
 
     public IProdutoRepository ProdutoRepository =>
         _produtoRepository ??= _repoFactory.Create<ProdutoRepository>(_context);
+
+    public ICategoriaProdutoRepository Categorias =>
+        _categorias ??= _repoFactory.Create<CategoriaProdutoRepository>(_context);
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
         _context.SaveChangesAsync(cancellationToken);

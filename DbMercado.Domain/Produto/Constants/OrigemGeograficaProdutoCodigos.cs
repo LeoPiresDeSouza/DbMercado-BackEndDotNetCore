@@ -5,5 +5,7 @@ namespace DbMercado.Domain.Produto.Constants;
 /// </summary>
 public static class OrigemGeograficaProdutoCodigos
 {
-    public const string Importado = "IMPORTADO";
+    public const string Nacional = "1";
+
+    public const string Importado = "2";
 }

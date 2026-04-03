@@ -9,9 +9,17 @@ public class ProdutoGridRowDto
 
     public string Nome { get; set; } = string.Empty;
 
-    public string UnidadeMedida { get; set; } = string.Empty;
+    public string UnidadeComercializacao { get; set; } = string.Empty;
+
+    public string UnidadeMedidaFisica { get; set; } = string.Empty;
+
+    public string TipoEmbalagem { get; set; } = string.Empty;
 
     public string? Marca { get; set; }
+
+    public string? CategoriaNome { get; set; }
+
+    public string? CategoriaSlug { get; set; }
 
     /// <summary>Filhos diretos; usado pelo AG Grid via <c>getChildCount</c>.</summary>
     public int ChildCount { get; set; }

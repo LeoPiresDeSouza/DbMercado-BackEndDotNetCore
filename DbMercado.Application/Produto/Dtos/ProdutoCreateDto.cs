@@ -12,7 +12,17 @@ public class ProdutoCreateDto
 
     public string? Gtin { get; set; }
 
-    public string UnidadeMedida { get; set; } = string.Empty;
+    /// <summary>Categoria do produto (opcional).</summary>
+    public long? CategoriaProdutoId { get; set; }
+
+    /// <summary>Como o produto é vendido (código do parâmetro unidadeComercializacao).</summary>
+    public string UnidadeComercializacao { get; set; } = string.Empty;
+
+    /// <summary>Natureza física para NF-e (código do parâmetro unidadeMedida).</summary>
+    public string UnidadeMedidaFisica { get; set; } = string.Empty;
+
+    /// <summary>Tipo de acondicionamento (código do parâmetro unidadeEmbalagem).</summary>
+    public string TipoEmbalagem { get; set; } = string.Empty;
 
     public ProdutoOrigemDto OrigemGeografica { get; set; } = null!;
 

@@ -4,8 +4,8 @@ using DbMercado.Domain.Shared.Exceptions;
 namespace DbMercado.Domain.Produto.ValueObjects;
 
 /// <summary>
-/// Origem geográfica do produto (nacional ou importado) e país de origem quando aplicável.
-/// O tipo é o código da chave em parâmetros (ex.: NACIONAL, IMPORTADO).
+/// Origem geográfica do produto e país de origem quando aplicável.
+/// O tipo é o código da chave em parâmetros (ex.: 1, 2).
 /// </summary>
 public sealed class OrigemProduto : IEquatable<OrigemProduto>
 {

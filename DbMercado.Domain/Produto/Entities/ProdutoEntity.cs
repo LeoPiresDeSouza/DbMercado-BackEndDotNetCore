@@ -20,8 +20,19 @@ public class ProdutoEntity : BaseEntity
 
     public string? Gtin { get; private set; }
 
-    /// <summary>Unidade de medida (ex.: UN, KG, CX).</summary>
-    public string UnidadeMedida { get; private set; } = string.Empty;
+    /// <summary>Categoria do produto na árvore de categorias (opcional na transição).</summary>
+    public long? CategoriaProdutoId { get; private set; }
+
+    public CategoriaProdutoEntity? CategoriaProduto { get; private set; }
+
+    /// <summary>Como o produto é vendido/faturado (código do parâmetro: UN, KIT, DZ, CX...).</summary>
+    public string UnidadeComercializacao { get; private set; } = string.Empty;
+
+    /// <summary>Natureza física para NF-e (código do parâmetro: UN, KG, L, M...).</summary>
+    public string UnidadeMedidaFisica { get; private set; } = string.Empty;
+
+    /// <summary>Tipo de acondicionamento da embalagem (código do parâmetro: CX, FD, PCT, LAT...).</summary>
+    public string TipoEmbalagem { get; private set; } = string.Empty;
 
     public DimensaoProduto? DimensaoProduto { get; private set; }
 
@@ -50,13 +61,16 @@ public class ProdutoEntity : BaseEntity
         string? marca,
         string? modelo,
         string? gtin,
-        string unidadeMedida,
+        string unidadeComercializacao,
+        string unidadeMedidaFisica,
+        string tipoEmbalagem,
         DimensaoProduto? dimensaoProduto,
         DimensaoEmbalagem dimensaoEmbalagem,
         OrigemProduto origemProduto,
         DadosFiscais dadosFiscais,
         IEnumerable<AtributoProduto>? atributosIniciais,
         IReadOnlyCollection<(string Codigo, bool Ativo)> skusIniciais,
+        long? categoriaProdutoId,
         string usuarioAuditoria)
     {
         ArgumentNullException.ThrowIfNull(dimensaoEmbalagem);
@@ -75,7 +89,10 @@ public class ProdutoEntity : BaseEntity
             Marca = string.IsNullOrWhiteSpace(marca) ? null : marca.Trim(),
             Modelo = string.IsNullOrWhiteSpace(modelo) ? null : modelo.Trim(),
             Gtin = string.IsNullOrWhiteSpace(gtin) ? null : gtin.Trim(),
-            UnidadeMedida = CodigoUnidadeMedidaProduto.Criar(unidadeMedida).Codigo,
+            CategoriaProdutoId = categoriaProdutoId,
+            UnidadeComercializacao = ValidarCodigoUnidade(unidadeComercializacao, "PRODUTO_UNIDADE_COMERCIALIZACAO_OBRIGATORIA", "Unidade de comercialização é obrigatória."),
+            UnidadeMedidaFisica = ValidarCodigoUnidade(unidadeMedidaFisica, "PRODUTO_UNIDADE_MEDIDA_OBRIGATORIA", "Unidade de medida física é obrigatória."),
+            TipoEmbalagem = ValidarCodigoUnidade(tipoEmbalagem, "PRODUTO_TIPO_EMBALAGEM_OBRIGATORIO", "Tipo de embalagem é obrigatório."),
             DimensaoProduto = dimensaoProduto,
             DimensaoEmbalagem = dimensaoEmbalagem,
             OrigemProduto = origemProduto,
@@ -145,7 +162,9 @@ public class ProdutoEntity : BaseEntity
         string? marca,
         string? modelo,
         string? gtin,
-        string unidadeMedida,
+        string unidadeComercializacao,
+        string unidadeMedidaFisica,
+        string tipoEmbalagem,
         OrigemProduto origemProduto,
         string usuarioAuditoria)
     {
@@ -156,7 +175,9 @@ public class ProdutoEntity : BaseEntity
         Marca = string.IsNullOrWhiteSpace(marca) ? null : marca.Trim();
         Modelo = string.IsNullOrWhiteSpace(modelo) ? null : modelo.Trim();
         Gtin = string.IsNullOrWhiteSpace(gtin) ? null : gtin.Trim();
-        UnidadeMedida = CodigoUnidadeMedidaProduto.Criar(unidadeMedida).Codigo;
+        UnidadeComercializacao = ValidarCodigoUnidade(unidadeComercializacao, "PRODUTO_UNIDADE_COMERCIALIZACAO_OBRIGATORIA", "Unidade de comercialização é obrigatória.");
+        UnidadeMedidaFisica = ValidarCodigoUnidade(unidadeMedidaFisica, "PRODUTO_UNIDADE_MEDIDA_OBRIGATORIA", "Unidade de medida física é obrigatória.");
+        TipoEmbalagem = ValidarCodigoUnidade(tipoEmbalagem, "PRODUTO_TIPO_EMBALAGEM_OBRIGATORIO", "Tipo de embalagem é obrigatório.");
         OrigemProduto = origemProduto;
         RegistrarAuditoriaAlteracao(usuarioAuditoria);
         Validar();
@@ -218,6 +239,12 @@ public class ProdutoEntity : BaseEntity
         Validar();
     }
 
+    public void AlterarCategoria(long? categoriaId, string usuarioAuditoria)
+    {
+        CategoriaProdutoId = categoriaId;
+        RegistrarAuditoriaAlteracao(usuarioAuditoria);
+    }
+
     /// <summary>
     /// Substitui a coleção de atributos flexíveis do produto (nome/valor).
     /// </summary>
@@ -238,7 +265,9 @@ public class ProdutoEntity : BaseEntity
     public void Validar()
     {
         GarantirNomeInformado(Nome);
-        _ = CodigoUnidadeMedidaProduto.Criar(UnidadeMedida);
+        ValidarCodigoUnidade(UnidadeComercializacao, "PRODUTO_UNIDADE_COMERCIALIZACAO_OBRIGATORIA", "Unidade de comercialização é obrigatória.");
+        ValidarCodigoUnidade(UnidadeMedidaFisica, "PRODUTO_UNIDADE_MEDIDA_OBRIGATORIA", "Unidade de medida física é obrigatória.");
+        ValidarCodigoUnidade(TipoEmbalagem, "PRODUTO_TIPO_EMBALAGEM_OBRIGATORIO", "Tipo de embalagem é obrigatório.");
         GarantirEmbalagemInformada(DimensaoEmbalagem);
         DimensaoEmbalagem.GarantirInvariantes();
         DimensaoProduto?.GarantirInvariantes();
@@ -249,6 +278,24 @@ public class ProdutoEntity : BaseEntity
             throw new BusinessException("PRODUTO_SKU_MINIMO", "O produto deve possuir pelo menos um SKU.");
 
         GarantirSkusSemDuplicidade(Skus.Select(s => s.Codigo));
+    }
+
+    private static string ValidarCodigoUnidade(string codigo, string errorCode, string errorMessage)
+    {
+        if (string.IsNullOrWhiteSpace(codigo))
+            throw new BusinessException(errorCode, errorMessage);
+
+        var c = codigo.Trim().ToUpperInvariant();
+        if (c.Length == 0 || c.Length > 16)
+            throw new BusinessException(errorCode, errorMessage).With("CodigoInformado", codigo);
+
+        foreach (var ch in c.AsSpan())
+        {
+            if (!char.IsLetterOrDigit(ch))
+                throw new BusinessException(errorCode, errorMessage).With("CodigoInformado", codigo);
+        }
+
+        return c;
     }
 
     private static void GarantirNomeInformado(string nome)

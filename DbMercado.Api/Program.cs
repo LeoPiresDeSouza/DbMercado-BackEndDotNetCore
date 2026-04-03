@@ -358,6 +358,7 @@ builder.Services.AddScoped<ICepProvider>(sp =>
 builder.Services.AddScoped<ICepService, CepService>();
 builder.Services.AddScoped<IImportacaoService, ImportacaoService>();
 builder.Services.AddScoped<IProdutoService, ProdutoService>();
+builder.Services.AddScoped<ICategoriaProdutoService, CategoriaProdutoService>();
 
 #endregion Injeção de dependência de serviços
 

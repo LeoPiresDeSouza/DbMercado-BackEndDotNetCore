@@ -46,6 +46,10 @@ public static class ProdutoGridQueryMapper
                            ?? new List<string>();
         var agregarContagemId = MapearAgregarContagemId(dto.ValueCols);
 
+        // Zero costuma vir de exemplos OpenAPI / clientes — não existe categoria Id 0; tratar como sem filtro.
+        var categoriaPainel = dto.CategoriaIdFiltro is > 0 ? dto.CategoriaIdFiltro : null;
+        var origemPainel = NormalizarOrigemFiltroPainel(dto.OrigemFiltro);
+
         return new ProdutoGridSpecification
         {
             Skip = skip,
@@ -54,8 +58,21 @@ public static class ProdutoGridQueryMapper
             Filtro = filtro,
             CamposAgrupamento = camposAgrupamento,
             ChavesGrupo = chavesGrupo,
-            AgregarContagemId = agregarContagemId
+            AgregarContagemId = agregarContagemId,
+            CategoriaIdFiltro = categoriaPainel,
+            OrigemFiltro = origemPainel
         };
+    }
+
+    /// <summary>Elimina whitespace e trata string literal "null" (alguns clientes) como ausência de filtro.</summary>
+    private static string? NormalizarOrigemFiltroPainel(string? origemFiltro)
+    {
+        if (string.IsNullOrWhiteSpace(origemFiltro))
+            return null;
+        var t = origemFiltro.Trim();
+        if (string.Equals(t, "null", StringComparison.OrdinalIgnoreCase))
+            return null;
+        return t;
     }
 
     private static IReadOnlyList<string> MapearCamposAgrupamento(List<ProdutoGridColumnVoDto>? rowGroupCols)

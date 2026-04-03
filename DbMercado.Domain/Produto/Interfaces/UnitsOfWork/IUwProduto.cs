@@ -6,5 +6,7 @@ public interface IUwProduto
 {
     IProdutoRepository ProdutoRepository { get; }
 
+    ICategoriaProdutoRepository Categorias { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

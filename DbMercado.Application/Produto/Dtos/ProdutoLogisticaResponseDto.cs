@@ -1,7 +1,7 @@
 namespace DbMercado.Application.Produto.Dtos;
 
 /// <summary>
-/// Dados logísticos do produto (dimensões, embalagem, peso e unidade de medida).
+/// Dados logísticos do produto (dimensões, embalagem, peso e unidades).
 /// </summary>
 public class ProdutoLogisticaResponseDto
 {
@@ -9,5 +9,9 @@ public class ProdutoLogisticaResponseDto
 
     public ProdutoDimensaoEmbalagemDto DimensaoEmbalagem { get; set; } = null!;
 
-    public string UnidadeMedida { get; set; } = string.Empty;
+    public string UnidadeComercializacao { get; set; } = string.Empty;
+
+    public string UnidadeMedidaFisica { get; set; } = string.Empty;
+
+    public string TipoEmbalagem { get; set; } = string.Empty;
 }

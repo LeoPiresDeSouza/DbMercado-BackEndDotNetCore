@@ -18,13 +18,19 @@ public class ProdutoEntityConfiguration : IEntityTypeConfiguration<ProdutoEntity
         builder.Property(p => p.Marca).HasMaxLength(128);
         builder.Property(p => p.Modelo).HasMaxLength(128);
         builder.Property(p => p.Gtin).HasMaxLength(32);
-        builder.Property(p => p.UnidadeMedida).IsRequired().HasMaxLength(16);
+        builder.Property(p => p.CategoriaProdutoId).IsRequired(false);
+        builder.Property(p => p.UnidadeComercializacao).IsRequired().HasMaxLength(16);
+        builder.Property(p => p.UnidadeMedidaFisica).IsRequired().HasMaxLength(16);
+        builder.Property(p => p.TipoEmbalagem).IsRequired().HasMaxLength(16);
 
         builder.OwnsOne(p => p.DimensaoProduto, d =>
         {
             d.Property(x => x.Altura).HasPrecision(18, 4);
             d.Property(x => x.Largura).HasPrecision(18, 4);
             d.Property(x => x.Comprimento).HasPrecision(18, 4);
+            d.Property(x => x.Peso).HasPrecision(18, 4);
+            d.Property(x => x.UnidadeDimensao).IsRequired().HasMaxLength(8);
+            d.Property(x => x.UnidadePeso).IsRequired().HasMaxLength(8);
         });
 
         builder.Navigation(p => p.DimensaoProduto).IsRequired(false);
@@ -35,6 +41,8 @@ public class ProdutoEntityConfiguration : IEntityTypeConfiguration<ProdutoEntity
             d.Property(x => x.Largura).HasPrecision(18, 4);
             d.Property(x => x.Comprimento).HasPrecision(18, 4);
             d.Property(x => x.Peso).HasPrecision(18, 4);
+            d.Property(x => x.UnidadeDimensao).IsRequired().HasMaxLength(8);
+            d.Property(x => x.UnidadePeso).IsRequired().HasMaxLength(8);
         });
 
         builder.OwnsOne(p => p.OrigemProduto, o =>
@@ -64,5 +72,11 @@ public class ProdutoEntityConfiguration : IEntityTypeConfiguration<ProdutoEntity
             .WithOne(s => s.Produto)
             .HasForeignKey(s => s.ProdutoId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(p => p.CategoriaProduto)
+            .WithMany()
+            .HasForeignKey(p => p.CategoriaProdutoId)
+            .OnDelete(DeleteBehavior.SetNull)
+            .IsRequired(false);
     }
 }

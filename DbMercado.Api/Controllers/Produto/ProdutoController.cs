@@ -77,6 +77,48 @@ public class ProdutoController : ControllerBase
         return Ok(lista);
     }
 
+    [HttpGet("parametros/unidades-comercializacao")]
+    public async Task<ActionResult<IReadOnlyList<ProdutoUnidadeMedidaOpcaoDto>>> ListarUnidadesComercializacao(CancellationToken cancellationToken)
+    {
+        var lista = await _produtoService.ListarUnidadesComercializacaoAsync(cancellationToken);
+        return Ok(lista);
+    }
+
+    [HttpGet("parametros/unidades-medida")]
+    public async Task<ActionResult<IReadOnlyList<ProdutoUnidadeMedidaOpcaoDto>>> ListarUnidadesMedida(CancellationToken cancellationToken)
+    {
+        var lista = await _produtoService.ListarUnidadesMedidaAsync(cancellationToken);
+        return Ok(lista);
+    }
+
+    [HttpGet("parametros/tipos-embalagem")]
+    public async Task<ActionResult<IReadOnlyList<ProdutoUnidadeMedidaOpcaoDto>>> ListarTiposEmbalagem(CancellationToken cancellationToken)
+    {
+        var lista = await _produtoService.ListarTiposEmbalagemAsync(cancellationToken);
+        return Ok(lista);
+    }
+
+    [HttpGet("parametros/unidades-dimensao")]
+    public async Task<ActionResult<IReadOnlyList<ProdutoUnidadeMedidaOpcaoDto>>> ListarUnidadesDimensao(CancellationToken cancellationToken)
+    {
+        var lista = await _produtoService.ListarUnidadesDimensaoAsync(cancellationToken);
+        return Ok(lista);
+    }
+
+    [HttpGet("parametros/unidades-peso")]
+    public async Task<ActionResult<IReadOnlyList<ProdutoUnidadeMedidaOpcaoDto>>> ListarUnidadesPeso(CancellationToken cancellationToken)
+    {
+        var lista = await _produtoService.ListarUnidadesPesoAsync(cancellationToken);
+        return Ok(lista);
+    }
+
+    [HttpGet("parametros/origens-geograficas")]
+    public async Task<ActionResult<IReadOnlyList<ProdutoUnidadeMedidaOpcaoDto>>> ListarOrigensGeograficas(CancellationToken cancellationToken)
+    {
+        var lista = await _produtoService.ListarOrigensGeograficasAsync(cancellationToken);
+        return Ok(lista);
+    }
+
     [HttpPost("consultas/grid")]
     public async Task<ActionResult<ProdutoGridResultDto>> ConsultarGrid(
         [FromBody] ProdutoGridQueryDto query,

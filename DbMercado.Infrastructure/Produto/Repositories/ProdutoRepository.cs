@@ -1,3 +1,4 @@
+using DbMercado.Domain.Produto.Constants;
 using DbMercado.Domain.Produto.Entities;
 using DbMercado.Domain.Produto.Interfaces.Repositories;
 using DbMercado.Domain.Produto.Queries;
@@ -25,7 +26,11 @@ public class ProdutoRepository : BaseRepository<ProdutoEntity>, IProdutoReposito
             query = query.AsNoTracking();
 
         query = query
-            .Include(p => p.Skus.OrderBy(s => s.Id));
+            .Include(p => p.Skus.OrderBy(s => s.Id))
+            .Include(p => p.CategoriaProduto)
+                .ThenInclude(c => c!.CategoriaPai)
+                .ThenInclude(c => c!.CategoriaPai)
+                .ThenInclude(c => c!.CategoriaPai);
 
         return await query.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
     }
@@ -51,18 +56,20 @@ public class ProdutoRepository : BaseRepository<ProdutoEntity>, IProdutoReposito
         string tipoOrigemCodigo,
         CancellationToken cancellationToken = default)
     {
-        return DbSet
-            .AsNoTracking()
-            .Where(p => p.OrigemProduto.Tipo == tipoOrigemCodigo)
-            .OrderBy(p => p.Nome)
-            .ToListAsync(cancellationToken);
+        var tipo12 = NormalizarTipoOrigemPainel(tipoOrigemCodigo);
+        if (tipo12 is null)
+            return Task.FromResult(new List<ProdutoEntity>());
+
+        var query = DbSet.AsNoTracking();
+        query = AplicarFiltroOrigemGeograficaCompativel(query, tipo12);
+        return query.OrderBy(p => p.Nome).ToListAsync(cancellationToken);
     }
 
     public Task<List<ProdutoEntity>> BuscarPorUnidadeMedidaAsync(string unidadeMedida, CancellationToken cancellationToken = default)
     {
         return DbSet
             .AsNoTracking()
-            .Where(p => p.UnidadeMedida.ToUpper() == unidadeMedida.ToUpper())
+            .Where(p => p.UnidadeMedidaFisica.ToUpper() == unidadeMedida.ToUpper())
             .OrderBy(p => p.Nome)
             .ToListAsync(cancellationToken);
     }
@@ -82,6 +89,7 @@ public class ProdutoRepository : BaseRepository<ProdutoEntity>, IProdutoReposito
     {
         var baseQuery = DbSet.AsNoTracking();
         var filtered = AplicarFiltrosGrid(baseQuery, spec.Filtro);
+        filtered = await AplicarFiltrosPainelAsync(filtered, spec, cancellationToken);
 
         if (spec.CamposAgrupamento.Count > 0)
             return await ConsultarGridAgrupadoAsync(filtered, spec, cancellationToken);
@@ -89,6 +97,7 @@ public class ProdutoRepository : BaseRepository<ProdutoEntity>, IProdutoReposito
         var total = await filtered.CountAsync(cancellationToken);
         var ordered = AplicarOrdenacaoGrid(filtered, spec.Ordenacao);
         var entities = await ordered
+            .Include(p => p.CategoriaProduto)
             .Skip(spec.Skip)
             .Take(spec.Take)
             .ToListAsync(cancellationToken);
@@ -133,6 +142,7 @@ public class ProdutoRepository : BaseRepository<ProdutoEntity>, IProdutoReposito
         var totalFolhas = await filteredComChaves.CountAsync(cancellationToken);
         var ordenadoFolhas = AplicarOrdenacaoGrid(filteredComChaves, spec.Ordenacao);
         var folhas = await ordenadoFolhas
+            .Include(p => p.CategoriaProduto)
             .Skip(spec.Skip)
             .Take(spec.Take)
             .ToListAsync(cancellationToken);
@@ -162,7 +172,7 @@ public class ProdutoRepository : BaseRepository<ProdutoEntity>, IProdutoReposito
             {
                 "marca" => query.Where(p => (p.Marca ?? string.Empty) == chave),
                 "nome" => query.Where(p => p.Nome == chave),
-                "unidadeMedida" => query.Where(p => p.UnidadeMedida == chave),
+                "unidadeMedida" => query.Where(p => p.UnidadeMedidaFisica == chave),
                 _ => query
             };
         }
@@ -198,7 +208,7 @@ public class ProdutoRepository : BaseRepository<ProdutoEntity>, IProdutoReposito
                 cancellationToken),
             "unidadeMedida" => await ListarGrupoPorExpressao(
                 filtered,
-                p => p.UnidadeMedida,
+                p => p.UnidadeMedidaFisica,
                 campos,
                 chavesPai,
                 "unidadeMedida",
@@ -262,6 +272,91 @@ public class ProdutoRepository : BaseRepository<ProdutoEntity>, IProdutoReposito
             d[campos[i]] = chavesPai[i] ?? string.Empty;
         d[campoAtual] = chaveAtual;
         return d;
+    }
+
+    private async Task<IQueryable<ProdutoEntity>> AplicarFiltrosPainelAsync(
+        IQueryable<ProdutoEntity> query,
+        ProdutoGridSpecification spec,
+        CancellationToken cancellationToken)
+    {
+        if (spec.CategoriaIdFiltro is > 0)
+        {
+            var idsCategoria = await ColetarIdsCategoriasDescendentesAsync(
+                spec.CategoriaIdFiltro.Value,
+                cancellationToken);
+            query = query.Where(p =>
+                p.CategoriaProdutoId.HasValue &&
+                idsCategoria.Contains(p.CategoriaProdutoId.Value));
+        }
+
+        var tipoOrigem = NormalizarTipoOrigemPainel(spec.OrigemFiltro);
+        if (tipoOrigem is not null)
+            query = AplicarFiltroOrigemGeograficaCompativel(query, tipoOrigem);
+
+        return query;
+    }
+
+    private async Task<HashSet<long>> ColetarIdsCategoriasDescendentesAsync(
+        long categoriaRaizId,
+        CancellationToken cancellationToken)
+    {
+        var ids = new HashSet<long> { categoriaRaizId };
+        var fila = new Queue<long>();
+        fila.Enqueue(categoriaRaizId);
+
+        while (fila.Count > 0)
+        {
+            var atual = fila.Dequeue();
+            var filhas = await _context.CategoriasProduto
+                .AsNoTracking()
+                .Where(c => c.CategoriaPaiId == atual)
+                .Select(c => c.Id)
+                .ToListAsync(cancellationToken);
+
+            foreach (var id in filhas)
+            {
+                if (ids.Add(id))
+                    fila.Enqueue(id);
+            }
+        }
+
+        return ids;
+    }
+
+    /// <summary>
+    /// Filtra por tipo de origem aceitando armazenamento como código (<c>1</c>/<c>2</c>, pós-domain) ou rótulo legado
+    /// (<c>NACIONAL</c>/<c>IMPORTADO</c>) da migração <c>ProdutoParametrosEmVezDeEnums</c>.
+    /// </summary>
+    private static IQueryable<ProdutoEntity> AplicarFiltroOrigemGeograficaCompativel(
+        IQueryable<ProdutoEntity> query,
+        string tipoNormalizado12)
+    {
+        return tipoNormalizado12 switch
+        {
+            OrigemGeograficaProdutoCodigos.Nacional => query.Where(p =>
+                p.OrigemProduto.Tipo == OrigemGeograficaProdutoCodigos.Nacional
+                || p.OrigemProduto.Tipo == "NACIONAL"),
+            OrigemGeograficaProdutoCodigos.Importado => query.Where(p =>
+                p.OrigemProduto.Tipo == OrigemGeograficaProdutoCodigos.Importado
+                || p.OrigemProduto.Tipo == "IMPORTADO"),
+            _ => query
+        };
+    }
+
+    /// <summary>Converte rótulos da UI para <c>1</c>/<c>2</c> (comparação ao valor persistido via <see cref="AplicarFiltroOrigemGeograficaCompativel"/>).</summary>
+    private static string? NormalizarTipoOrigemPainel(string? origemFiltro)
+    {
+        if (string.IsNullOrWhiteSpace(origemFiltro))
+            return null;
+
+        return origemFiltro.Trim().ToUpperInvariant() switch
+        {
+            "NACIONAL" => "1",
+            "IMPORTADO" => "2",
+            "1" => "1",
+            "2" => "2",
+            _ => null
+        };
     }
 
     private static IQueryable<ProdutoEntity> AplicarFiltrosGrid(
@@ -370,19 +465,19 @@ public class ProdutoRepository : BaseRepository<ProdutoEntity>, IProdutoReposito
             query = f.Operador switch
             {
                 TextoFiltroOperador.Contem when v.Length > 0 =>
-                    query.Where(p => p.UnidadeMedida.ToLower().Contains(v.ToLower())),
+                    query.Where(p => p.UnidadeMedidaFisica.ToLower().Contains(v.ToLower())),
                 TextoFiltroOperador.NaoContem when v.Length > 0 =>
-                    query.Where(p => !p.UnidadeMedida.ToLower().Contains(v.ToLower())),
+                    query.Where(p => !p.UnidadeMedidaFisica.ToLower().Contains(v.ToLower())),
                 TextoFiltroOperador.Igual when v.Length > 0 =>
-                    query.Where(p => p.UnidadeMedida.ToLower() == v.ToLower()),
+                    query.Where(p => p.UnidadeMedidaFisica.ToLower() == v.ToLower()),
                 TextoFiltroOperador.Diferente when v.Length > 0 =>
-                    query.Where(p => p.UnidadeMedida.ToLower() != v.ToLower()),
+                    query.Where(p => p.UnidadeMedidaFisica.ToLower() != v.ToLower()),
                 TextoFiltroOperador.ComecaCom when v.Length > 0 =>
-                    query.Where(p => p.UnidadeMedida.ToLower().StartsWith(v.ToLower())),
+                    query.Where(p => p.UnidadeMedidaFisica.ToLower().StartsWith(v.ToLower())),
                 TextoFiltroOperador.TerminaCom when v.Length > 0 =>
-                    query.Where(p => p.UnidadeMedida.ToLower().EndsWith(v.ToLower())),
-                TextoFiltroOperador.EmBranco => query.Where(p => p.UnidadeMedida == string.Empty),
-                TextoFiltroOperador.NaoEmBranco => query.Where(p => p.UnidadeMedida != string.Empty),
+                    query.Where(p => p.UnidadeMedidaFisica.ToLower().EndsWith(v.ToLower())),
+                TextoFiltroOperador.EmBranco => query.Where(p => p.UnidadeMedidaFisica == string.Empty),
+                TextoFiltroOperador.NaoEmBranco => query.Where(p => p.UnidadeMedidaFisica != string.Empty),
                 _ => query
             };
         }
@@ -416,12 +511,12 @@ public class ProdutoRepository : BaseRepository<ProdutoEntity>, IProdutoReposito
                     o.Crescente ? ordered!.ThenBy(p => p.Marca) : ordered!.ThenByDescending(p => p.Marca),
                 "unidadeMedida" when ordered is null =>
                     o.Crescente
-                        ? query.OrderBy(p => p.UnidadeMedida)
-                        : query.OrderByDescending(p => p.UnidadeMedida),
+                        ? query.OrderBy(p => p.UnidadeMedidaFisica)
+                        : query.OrderByDescending(p => p.UnidadeMedidaFisica),
                 "unidadeMedida" =>
                     o.Crescente
-                        ? ordered!.ThenBy(p => p.UnidadeMedida)
-                        : ordered!.ThenByDescending(p => p.UnidadeMedida),
+                        ? ordered!.ThenBy(p => p.UnidadeMedidaFisica)
+                        : ordered!.ThenByDescending(p => p.UnidadeMedidaFisica),
                 _ when ordered is null => query.OrderBy(p => p.Nome),
                 _ => ordered!
             };

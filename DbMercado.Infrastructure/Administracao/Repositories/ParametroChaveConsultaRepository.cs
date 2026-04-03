@@ -24,4 +24,17 @@ public class ParametroChaveConsultaRepository : IParametroChaveConsultaRepositor
                 p => p.Categoria == categoria && p.Atributo == atributo && p.Chave == chave,
                 cancellationToken);
     }
+
+    public async Task<IReadOnlyList<(string Chave, string Valor)>> ListarPorCategoriaEAtributoAsync(
+        string categoria,
+        string atributo,
+        CancellationToken cancellationToken = default)
+    {
+        var rows = await _context.Parametros.AsNoTracking()
+            .Where(p => p.Categoria == categoria && p.Atributo == atributo)
+            .OrderBy(p => p.Chave)
+            .Select(p => new { p.Chave, p.Valor })
+            .ToListAsync(cancellationToken);
+        return rows.ConvertAll(r => (r.Chave, r.Valor));
+    }
 }

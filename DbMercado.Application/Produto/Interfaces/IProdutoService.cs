@@ -29,4 +29,16 @@ public interface IProdutoService
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ProdutoListItemDto>> BuscarPorMarcaAsync(string marca, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ProdutoUnidadeMedidaOpcaoDto>> ListarUnidadesComercializacaoAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ProdutoUnidadeMedidaOpcaoDto>> ListarUnidadesMedidaAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ProdutoUnidadeMedidaOpcaoDto>> ListarTiposEmbalagemAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ProdutoUnidadeMedidaOpcaoDto>> ListarUnidadesDimensaoAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ProdutoUnidadeMedidaOpcaoDto>> ListarUnidadesPesoAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ProdutoUnidadeMedidaOpcaoDto>> ListarOrigensGeograficasAsync(CancellationToken cancellationToken = default);
 }

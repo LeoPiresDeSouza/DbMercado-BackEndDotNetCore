@@ -27,6 +27,19 @@ public class ProdutoGridQueryDto
 
     /// <summary>Metadados SSRM (pivot completo não é suportado nesta API).</summary>
     public bool PivotMode { get; set; }
+
+    /// <summary>
+    /// Filtra produtos pela categoria selecionada no painel de facetas.
+    /// Inclui a categoria informada e todas as suas subcategorias (qualquer nível).
+    /// Nulo, omitido ou <c>0</c> = sem filtro (evita confusão com inteiros padrão em clientes/Swagger).
+    /// </summary>
+    public long? CategoriaIdFiltro { get; set; }
+
+    /// <summary>
+    /// Filtra por origem geográfica: <c>NACIONAL</c> ou <c>IMPORTADO</c> (alinhado à UI; mapeado para códigos do cadastro).
+    /// Nulo ou vazio = sem filtro.
+    /// </summary>
+    public string? OrigemFiltro { get; set; }
 }
 
 public class ProdutoGridSortItemDto

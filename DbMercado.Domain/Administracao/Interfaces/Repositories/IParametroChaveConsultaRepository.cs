@@ -10,4 +10,10 @@ public interface IParametroChaveConsultaRepository
         string atributo,
         string chave,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Lista chaves e valores do catálogo (ordenado por chave).</summary>
+    Task<IReadOnlyList<(string Chave, string Valor)>> ListarPorCategoriaEAtributoAsync(
+        string categoria,
+        string atributo,
+        CancellationToken cancellationToken = default);
 }
