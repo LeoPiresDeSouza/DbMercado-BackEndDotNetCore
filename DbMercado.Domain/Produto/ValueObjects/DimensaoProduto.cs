@@ -29,13 +29,17 @@ public sealed class DimensaoProduto : IEquatable<DimensaoProduto>
         string unidadePeso)
     {
         if (altura <= 0)
-            throw new BusinessException("PRODUTO_DIMENSAO_ALTURA_INVALIDA", "Altura do produto deve ser maior que zero.");
+            throw new BusinessException("PRODUTO_DIMENSAO_ALTURA_INVALIDA",
+                "Altura do produto deve ser maior que zero. Informe um valor decimal positivo (ex.: 10 ou 0,05).");
         if (largura <= 0)
-            throw new BusinessException("PRODUTO_DIMENSAO_LARGURA_INVALIDA", "Largura do produto deve ser maior que zero.");
+            throw new BusinessException("PRODUTO_DIMENSAO_LARGURA_INVALIDA",
+                "Largura do produto deve ser maior que zero. Informe um valor decimal positivo (ex.: 10 ou 0,05).");
         if (comprimento <= 0)
-            throw new BusinessException("PRODUTO_DIMENSAO_COMPRIMENTO_INVALIDO", "Comprimento do produto deve ser maior que zero.");
+            throw new BusinessException("PRODUTO_DIMENSAO_COMPRIMENTO_INVALIDO",
+                "Comprimento do produto deve ser maior que zero. Informe um valor decimal positivo (ex.: 10 ou 0,05).");
         if (peso <= 0)
-            throw new BusinessException("PRODUTO_DIMENSAO_PESO_INVALIDO", "Peso do produto deve ser maior que zero.");
+            throw new BusinessException("PRODUTO_DIMENSAO_PESO_INVALIDO",
+                "Peso do produto deve ser maior que zero. Informe um valor decimal positivo (ex.: 0,5 ou 1,2).");
         if (string.IsNullOrWhiteSpace(unidadeDimensao))
             throw new BusinessException("PRODUTO_DIMENSAO_UNIDADE_OBRIGATORIA", "Unidade das dimensões do produto é obrigatória.");
         if (string.IsNullOrWhiteSpace(unidadePeso))
@@ -54,10 +58,14 @@ public sealed class DimensaoProduto : IEquatable<DimensaoProduto>
 
     public void GarantirInvariantes()
     {
-        GarantirPositivo(Altura, "PRODUTO_DIMENSAO_ALTURA_INVALIDA", "Altura do produto deve ser maior que zero.");
-        GarantirPositivo(Largura, "PRODUTO_DIMENSAO_LARGURA_INVALIDA", "Largura do produto deve ser maior que zero.");
-        GarantirPositivo(Comprimento, "PRODUTO_DIMENSAO_COMPRIMENTO_INVALIDO", "Comprimento do produto deve ser maior que zero.");
-        GarantirPositivo(Peso, "PRODUTO_DIMENSAO_PESO_INVALIDO", "Peso do produto deve ser maior que zero.");
+        GarantirPositivo(Altura, "PRODUTO_DIMENSAO_ALTURA_INVALIDA",
+            "Altura do produto deve ser maior que zero. Verifique os dados gravados.");
+        GarantirPositivo(Largura, "PRODUTO_DIMENSAO_LARGURA_INVALIDA",
+            "Largura do produto deve ser maior que zero. Verifique os dados gravados.");
+        GarantirPositivo(Comprimento, "PRODUTO_DIMENSAO_COMPRIMENTO_INVALIDO",
+            "Comprimento do produto deve ser maior que zero. Verifique os dados gravados.");
+        GarantirPositivo(Peso, "PRODUTO_DIMENSAO_PESO_INVALIDO",
+            "Peso do produto deve ser maior que zero. Verifique os dados gravados.");
 
         if (string.IsNullOrWhiteSpace(UnidadeDimensao))
             throw new BusinessException("PRODUTO_DIMENSAO_UNIDADE_OBRIGATORIA", "Unidade das dimensões do produto é obrigatória.");

@@ -29,13 +29,17 @@ public sealed class DimensaoEmbalagem : IEquatable<DimensaoEmbalagem>
         string unidadePeso)
     {
         if (altura <= 0)
-            throw new BusinessException("EMBALAGEM_ALTURA_INVALIDA", "Altura da embalagem deve ser maior que zero.");
+            throw new BusinessException("EMBALAGEM_ALTURA_INVALIDA",
+                "Altura da embalagem deve ser maior que zero. Informe um valor decimal positivo (ex.: 10 ou 0,05).");
         if (largura <= 0)
-            throw new BusinessException("EMBALAGEM_LARGURA_INVALIDA", "Largura da embalagem deve ser maior que zero.");
+            throw new BusinessException("EMBALAGEM_LARGURA_INVALIDA",
+                "Largura da embalagem deve ser maior que zero. Informe um valor decimal positivo (ex.: 10 ou 0,05).");
         if (comprimento <= 0)
-            throw new BusinessException("EMBALAGEM_COMPRIMENTO_INVALIDO", "Comprimento da embalagem deve ser maior que zero.");
+            throw new BusinessException("EMBALAGEM_COMPRIMENTO_INVALIDO",
+                "Comprimento da embalagem deve ser maior que zero. Informe um valor decimal positivo (ex.: 10 ou 0,05).");
         if (peso <= 0)
-            throw new BusinessException("EMBALAGEM_PESO_INVALIDO", "Peso da embalagem deve ser maior que zero.");
+            throw new BusinessException("EMBALAGEM_PESO_INVALIDO",
+                "Peso da embalagem deve ser maior que zero. Informe um valor decimal positivo (ex.: 0,5 ou 1,2).");
         if (string.IsNullOrWhiteSpace(unidadeDimensao))
             throw new BusinessException("EMBALAGEM_UNIDADE_DIMENSAO_OBRIGATORIA", "Unidade das dimensões da embalagem é obrigatória.");
         if (string.IsNullOrWhiteSpace(unidadePeso))
@@ -54,10 +58,14 @@ public sealed class DimensaoEmbalagem : IEquatable<DimensaoEmbalagem>
 
     public void GarantirInvariantes()
     {
-        GarantirPositivo(Altura, "EMBALAGEM_ALTURA_INVALIDA", "Altura da embalagem deve ser maior que zero.");
-        GarantirPositivo(Largura, "EMBALAGEM_LARGURA_INVALIDA", "Largura da embalagem deve ser maior que zero.");
-        GarantirPositivo(Comprimento, "EMBALAGEM_COMPRIMENTO_INVALIDO", "Comprimento da embalagem deve ser maior que zero.");
-        GarantirPositivo(Peso, "EMBALAGEM_PESO_INVALIDO", "Peso da embalagem deve ser maior que zero.");
+        GarantirPositivo(Altura, "EMBALAGEM_ALTURA_INVALIDA",
+            "Altura da embalagem deve ser maior que zero. Verifique os dados gravados.");
+        GarantirPositivo(Largura, "EMBALAGEM_LARGURA_INVALIDA",
+            "Largura da embalagem deve ser maior que zero. Verifique os dados gravados.");
+        GarantirPositivo(Comprimento, "EMBALAGEM_COMPRIMENTO_INVALIDO",
+            "Comprimento da embalagem deve ser maior que zero. Verifique os dados gravados.");
+        GarantirPositivo(Peso, "EMBALAGEM_PESO_INVALIDO",
+            "Peso da embalagem deve ser maior que zero. Verifique os dados gravados.");
 
         if (string.IsNullOrWhiteSpace(UnidadeDimensao))
             throw new BusinessException("EMBALAGEM_UNIDADE_DIMENSAO_OBRIGATORIA", "Unidade das dimensões da embalagem é obrigatória.");

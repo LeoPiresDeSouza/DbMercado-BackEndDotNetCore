@@ -23,6 +23,7 @@ public static class ServiceCollectionQuartzExtensions
             quartzConfigurator.SchedulerName = options.SchedulerName;
 
             RegisterLogCleanupIfEnabled(quartzConfigurator, options);
+            RegisterLimpezaMidiasTemporariasIfEnabled(quartzConfigurator, options);
 
             // Futuros: registrar aqui MarketplaceSyncJob, ConciliacaoFinanceiraJob, ReprocessamentoJob
             // usando options.MarketplaceSync / ConciliacaoFinanceira / Reprocessamento e os grupos em QuartzJobGroups.
@@ -52,6 +53,25 @@ public static class ServiceCollectionQuartzExtensions
         var triggerKey = new TriggerKey($"{LogCleanupJob.JobName}-trigger", QuartzJobGroups.Maintenance);
 
         q.AddJob<LogCleanupJob>(j => j.WithIdentity(jobKey));
+        q.AddTrigger(t => t
+            .ForJob(jobKey)
+            .WithIdentity(triggerKey)
+            .WithCronSchedule(cron, b => b.InTimeZone(TimeZoneInfo.Utc)));
+    }
+
+    private static void RegisterLimpezaMidiasTemporariasIfEnabled(IServiceCollectionQuartzConfigurator q, QuartzSchedulingOptions options)
+    {
+        if (!options.LimpezaMidiasTemporarias.Enabled)
+            return;
+
+        var cron = options.LimpezaMidiasTemporarias.CronSchedule?.Trim();
+        if (string.IsNullOrEmpty(cron))
+            throw new InvalidOperationException("Quartz:LimpezaMidiasTemporarias:CronSchedule é obrigatório quando Enabled é true.");
+
+        var jobKey = new JobKey(LimpezaMidiasTemporariasJob.JobName, QuartzJobGroups.Maintenance);
+        var triggerKey = new TriggerKey($"{LimpezaMidiasTemporariasJob.JobName}-trigger", QuartzJobGroups.Maintenance);
+
+        q.AddJob<LimpezaMidiasTemporariasJob>(j => j.WithIdentity(jobKey));
         q.AddTrigger(t => t
             .ForJob(jobKey)
             .WithIdentity(triggerKey)

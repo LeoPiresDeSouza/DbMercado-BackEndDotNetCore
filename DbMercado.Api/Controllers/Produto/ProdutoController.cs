@@ -1,7 +1,6 @@
-using System.Security.Claims;
+using DbMercado.Api.Extensions;
 using DbMercado.Application.Produto.Dtos;
 using DbMercado.Application.Produto.Interfaces;
-using DbMercado.Domain.Shared;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,16 +12,15 @@ namespace DbMercado.Api.Controllers.Produto;
 public class ProdutoController : ControllerBase
 {
     private readonly IProdutoService _produtoService;
+    private readonly IMidiaService _midiaService;
 
-    public ProdutoController(IProdutoService produtoService)
+    public ProdutoController(IProdutoService produtoService, IMidiaService midiaService)
     {
         _produtoService = produtoService;
+        _midiaService = midiaService;
     }
 
-    private string UsuarioAuditoria =>
-        User.FindFirstValue(ClaimTypes.Name)
-        ?? User.FindFirstValue(ClaimTypes.Email)
-        ?? ApplicationSettings.Application.AnonymousUser;
+    private string UsuarioAuditoria => User.ResolveUsuarioAuditoria();
 
     [HttpPost]
     public async Task<ActionResult<long>> Criar(
@@ -61,6 +59,32 @@ public class ProdutoController : ControllerBase
     {
         var produto = await _produtoService.ObterPorIdAsync(id, cancellationToken);
         return produto is null ? NotFound() : Ok(produto);
+    }
+
+    [HttpGet("{id:long}/midias")]
+    public async Task<ActionResult<IReadOnlyList<MidiaResponseDto>>> ListarMidias(
+        long id,
+        CancellationToken cancellationToken)
+    {
+        var produto = await _produtoService.ObterPorIdAsync(id, cancellationToken);
+        if (produto is null)
+            return NotFound();
+
+        var lista = await _midiaService.ListarPorProdutoAsync(id, cancellationToken);
+        return Ok(lista);
+    }
+
+    [HttpPost("{id:long}/midias")]
+    public async Task<IActionResult> AssociarMidias(
+        long id,
+        [FromBody] MidiaAssociarDto request,
+        CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        await _midiaService.AssociarAoProdutoAsync(id, request, UsuarioAuditoria, cancellationToken);
+        return NoContent();
     }
 
     [HttpGet("{id:long}/logistica")]
@@ -116,6 +140,13 @@ public class ProdutoController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<ProdutoUnidadeMedidaOpcaoDto>>> ListarOrigensGeograficas(CancellationToken cancellationToken)
     {
         var lista = await _produtoService.ListarOrigensGeograficasAsync(cancellationToken);
+        return Ok(lista);
+    }
+
+    [HttpGet("parametros/origens-icms")]
+    public async Task<ActionResult<IReadOnlyList<ProdutoUnidadeMedidaOpcaoDto>>> ListarOrigensIcms(CancellationToken cancellationToken)
+    {
+        var lista = await _produtoService.ListarOrigensIcmsAsync(cancellationToken);
         return Ok(lista);
     }
 

@@ -8,5 +8,7 @@ public interface IUwProduto
 
     ICategoriaProdutoRepository Categorias { get; }
 
+    IMidiaRepository Midias { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

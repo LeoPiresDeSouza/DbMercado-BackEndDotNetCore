@@ -1,7 +1,6 @@
-using System.Security.Claims;
+using DbMercado.Api.Extensions;
 using DbMercado.Application.Importacao.Dtos;
 using DbMercado.Application.Importacao.Interfaces;
-using DbMercado.Domain.Shared;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,10 +18,7 @@ public class ImportacaoController : ControllerBase
         _importacaoService = importacaoService;
     }
 
-    private string UsuarioAuditoria =>
-        User.FindFirstValue(ClaimTypes.Name)
-        ?? User.FindFirstValue(ClaimTypes.Email)
-        ?? ApplicationSettings.Application.AnonymousUser;
+    private string UsuarioAuditoria => User.ResolveUsuarioAuditoria();
 
     [HttpPost("notas-fiscais")]
     public async Task<ActionResult<long>> CadastrarNotaFiscal(

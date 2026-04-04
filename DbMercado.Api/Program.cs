@@ -6,6 +6,7 @@ using DbMercado.Application.Importacao.Interfaces;
 using DbMercado.Application.Importacao.Services;
 using DbMercado.Application.Produto.Interfaces;
 using DbMercado.Application.Produto.Services;
+using DbMercado.Infrastructure.Produto.Services;
 using DbMercado.Domain.Shared;
 using DbMercado.CrossCutting.Settings;
 using DbMercado.Domain.Administracao.Interfaces.Repositories;
@@ -359,6 +360,8 @@ builder.Services.AddScoped<ICepService, CepService>();
 builder.Services.AddScoped<IImportacaoService, ImportacaoService>();
 builder.Services.AddScoped<IProdutoService, ProdutoService>();
 builder.Services.AddScoped<ICategoriaProdutoService, CategoriaProdutoService>();
+builder.Services.AddScoped<IMidiaArquivoStorage, MidiaArquivoStorage>();
+builder.Services.AddScoped<IMidiaService, MidiaService>();
 
 #endregion Injeção de dependência de serviços
 
@@ -392,6 +395,7 @@ if (!app.Environment.IsDevelopment() || app.Configuration.GetValue("UseHttpsRedi
 }
 
 app.UseCors(); // Adicionado para permitir requisições de outras origens
+app.UseStaticFiles();
 app.UseAuthentication();  // Deve vir antes de UseAuthorization para validar o JWT
 app.UseAuthorization();
 app.MapControllers();

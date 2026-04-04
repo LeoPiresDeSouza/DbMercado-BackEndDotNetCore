@@ -41,4 +41,6 @@ public interface IProdutoService
     Task<IReadOnlyList<ProdutoUnidadeMedidaOpcaoDto>> ListarUnidadesPesoAsync(CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ProdutoUnidadeMedidaOpcaoDto>> ListarOrigensGeograficasAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ProdutoUnidadeMedidaOpcaoDto>> ListarOrigensIcmsAsync(CancellationToken cancellationToken = default);
 }

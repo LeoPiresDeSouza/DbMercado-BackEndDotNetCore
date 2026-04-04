@@ -21,6 +21,9 @@ public sealed class QuartzSchedulingOptions
 
     public LogCleanupJobOptions LogCleanup { get; set; } = new();
 
+    /// <summary>Remove arquivos e registros de m upload temporário não associado ao produto.</summary>
+    public LimpezaMidiasTemporariasJobOptions LimpezaMidiasTemporarias { get; set; } = new();
+
     /// <summary>Reservado: sincronização com marketplaces externos.</summary>
     public JobScheduleOptions MarketplaceSync { get; set; } = new();
 
@@ -45,6 +48,13 @@ public sealed class LogCleanupJobOptions : JobScheduleOptions
 {
     /// <summary>Dias de retenção; registros com <c>CreatedAt</c> anteriores a esse período são excluídos.</summary>
     public int RetentionDays { get; set; } = 90;
+}
+
+/// <summary>Mídias em <c>temporario</c> com <c>DataCriacao</c> anterior ao cutoff são excluídas.</summary>
+public sealed class LimpezaMidiasTemporariasJobOptions : JobScheduleOptions
+{
+    /// <summary>Horas sem associação ao produto antes da remoção (padrão 24).</summary>
+    public int HorasRetencao { get; set; } = 24;
 }
 
 /// <summary>Grupos Quartz para organizar jobs por área (facilita futuros UIs ou pausas por grupo).</summary>

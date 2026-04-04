@@ -27,7 +27,9 @@ public sealed class OrigemProduto : IEquatable<OrigemProduto>
         var pais = string.IsNullOrWhiteSpace(paisOrigem) ? null : paisOrigem.Trim();
 
         if (tipo == OrigemGeograficaProdutoCodigos.Importado && string.IsNullOrEmpty(pais))
-            throw new BusinessException("PRODUTO_PAIS_ORIGEM_OBRIGATORIO", "País de origem é obrigatório para produto importado.");
+            throw new BusinessException("PRODUTO_PAIS_ORIGEM_OBRIGATORIO",
+                    "Para origem geográfica importada, o país de origem é obrigatório. Informe o país conforme a operação (ex.: código ISO ou nome).")
+                .With("TipoOrigemCodigo", tipo);
 
         return new OrigemProduto
         {

@@ -331,7 +331,8 @@ public class ProdutoEntity : BaseEntity
         {
             var c = codigo.Trim();
             if (!vistos.Add(c))
-                throw new DuplicateEntityException("PRODUTO_SKU_DUPLICADO", $"SKU duplicado: '{c}'.")
+                throw new DuplicateEntityException("PRODUTO_SKU_DUPLICADO",
+                        $"Existem SKUs com o mesmo código '{c}' (a comparação ignora maiúsculas e minúsculas). Cada item precisa de um código único.")
                     .With("Codigo", c);
         }
     }

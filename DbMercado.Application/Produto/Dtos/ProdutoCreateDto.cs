@@ -35,4 +35,7 @@ public class ProdutoCreateDto
     public IReadOnlyList<ProdutoSkuItemDto> Skus { get; set; } = Array.Empty<ProdutoSkuItemDto>();
 
     public IReadOnlyList<ProdutoAtributoDto>? Atributos { get; set; }
+
+    /// <summary>Mídias já gravadas (upload temporário) a associar ao produto; opcional.</summary>
+    public IReadOnlyList<MidiaAssociarItemDto>? Midias { get; set; }
 }

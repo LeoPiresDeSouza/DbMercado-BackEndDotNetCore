@@ -184,16 +184,22 @@ public class DbInitializer
         AddParametroIfNotExists(context, "produto", "origemGeografica", "1", "Nacional",  null, dataCarga, usuarioCarga);
         AddParametroIfNotExists(context, "produto", "origemGeografica", "2", "Importado", null, dataCarga, usuarioCarga);
 
-        // ─── Origem ICMS — tabela SEFAZ (códigos 0 a 8) ───
-        AddParametroIfNotExists(context, "produto", "origemIcms", "0", "0 — Nacional, exceto códigos 3 a 5",                                null, dataCarga, usuarioCarga);
-        AddParametroIfNotExists(context, "produto", "origemIcms", "1", "1 — Estrangeira, importação direta, exceto código 6",               null, dataCarga, usuarioCarga);
-        AddParametroIfNotExists(context, "produto", "origemIcms", "2", "2 — Estrangeira, adquirida no mercado interno, exceto código 7",    null, dataCarga, usuarioCarga);
-        AddParametroIfNotExists(context, "produto", "origemIcms", "3", "3 — Nacional, conteúdo de importação > 40% e ≤ 70%",               null, dataCarga, usuarioCarga);
-        AddParametroIfNotExists(context, "produto", "origemIcms", "4", "4 — Nacional, processo produtivo básico (PPB)",                    null, dataCarga, usuarioCarga);
-        AddParametroIfNotExists(context, "produto", "origemIcms", "5", "5 — Nacional, conteúdo de importação ≤ 40%",                       null, dataCarga, usuarioCarga);
-        AddParametroIfNotExists(context, "produto", "origemIcms", "6", "6 — Estrangeira, importação direta sem similar nacional",          null, dataCarga, usuarioCarga);
-        AddParametroIfNotExists(context, "produto", "origemIcms", "7", "7 — Estrangeira, mercado interno sem similar nacional",            null, dataCarga, usuarioCarga);
-        AddParametroIfNotExists(context, "produto", "origemIcms", "8", "8 — Nacional, conteúdo de importação > 70%",                      null, dataCarga, usuarioCarga);
+        // ─── Origem ICMS (SEFAZ): atributo produto/origemIcms, códigos 0–8 — exatamente uma linha por Chave ───
+        // AddParametroIfNotExists não serve aqui: ele só bloqueia (categoria+atributo+chave+valor) repetido; a mesma Chave com outro texto virava segunda linha.
+        var origensIcmsSefaz = new (string chave, string valor)[]
+        {
+            ("0", "0 — Nacional, exceto códigos 3 a 5"),
+            ("1", "1 — Estrangeira, importação direta, exceto código 6"),
+            ("2", "2 — Estrangeira, adquirida no mercado interno, exceto código 7"),
+            ("3", "3 — Nacional, conteúdo de importação > 40% e ≤ 70%"),
+            ("4", "4 — Nacional, processo produtivo básico (PPB)"),
+            ("5", "5 — Nacional, conteúdo de importação ≤ 40%"),
+            ("6", "6 — Estrangeira, importação direta sem similar nacional"),
+            ("7", "7 — Estrangeira, mercado interno sem similar nacional"),
+            ("8", "8 — Nacional, conteúdo de importação > 70%"),
+        };
+        foreach (var (chave, valor) in origensIcmsSefaz)
+            AddParametroProdutoOrigemIcmsSeChaveLivre(context, chave, valor, null, dataCarga, usuarioCarga);
     }
 
 
@@ -211,6 +217,35 @@ public class DbInitializer
                                         m.Atributo == atributo &&
                                         m.Chave == chave &&
                                         m.Valor == valor))
+            return;
+
+        context.Parametros.Add(new ParametroEntity
+        {
+            Categoria = categoria,
+            Atributo = atributo,
+            Chave = chave,
+            Valor = valor,
+            Descricao = descricao,
+            DataCriacao = dataCarga,
+            DataUltimaAlteracao = dataCarga,
+            UsuarioCriacao = usuarioCarga,
+            UsuarioUltimaAlteracao = usuarioCarga
+        });
+    }
+
+    /// <summary>Insere produto/origemIcms só se ainda não existir linha com a mesma <paramref name="chave"/> (seed SEFAZ 0–8).</summary>
+    private static void AddParametroProdutoOrigemIcmsSeChaveLivre(
+        AppDbContext context,
+        string chave,
+        string valor,
+        string? descricao,
+        DateTime dataCarga,
+        string usuarioCarga)
+    {
+        const string categoria = "produto";
+        const string atributo = "origemIcms";
+        if (context.Parametros.Any(m =>
+                m.Categoria == categoria && m.Atributo == atributo && m.Chave == chave))
             return;
 
         context.Parametros.Add(new ParametroEntity
@@ -451,8 +486,8 @@ public class DbInitializer
                     unidadeComercializacao: "UN",
                     unidadeMedidaFisica: "KG",
                     tipoEmbalagem: "PCT",
-                    dimensaoProduto: DimensaoProduto.Criar(0.03m, 0.12m, 0.18m, 0.25m, "CM", "KG"),
-                    dimensaoEmbalagem: DimensaoEmbalagem.Criar(0.035m, 0.13m, 0.19m, 0.26m, "CM", "KG"),
+                    dimensaoProduto: DimensaoProduto.Criar(30m, 12m, 18m, 25m, "CM", "KG"),
+                    dimensaoEmbalagem: DimensaoEmbalagem.Criar(35m, 13m, 19m, 0.26m, "CM", "KG"),
                     origemProduto: OrigemProduto.Criar("1", null),
                     dadosFiscais: DadosFiscais.Criar("09011100", null, "0"),
                     atributosIniciais: new[] { AtributoProduto.Criar("Torra", "Média"), AtributoProduto.Criar("Safra", "Referência demo") },

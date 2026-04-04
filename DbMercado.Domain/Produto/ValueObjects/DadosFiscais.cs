@@ -42,11 +42,13 @@ public sealed class DadosFiscais : IEquatable<DadosFiscais>
     public void GarantirInvariantes()
     {
         if (string.IsNullOrWhiteSpace(Ncm) || Ncm.Length != 8 || !TodosDigitos(Ncm))
-            throw new BusinessException("PRODUTO_NCM_INVALIDO", "NCM deve conter exatamente 8 dígitos numéricos.")
+            throw new BusinessException("PRODUTO_NCM_INVALIDO",
+                    "NCM inválido nos dados persistidos: são necessários exatamente 8 dígitos (0–9). Corrija o cadastro ou reclassifique o produto.")
                 .With("NcmArmazenado", Ncm);
 
         if (Cest is not null && (Cest.Length != 7 || !TodosDigitos(Cest)))
-            throw new BusinessException("PRODUTO_CEST_INVALIDO", "CEST armazenado deve ter 7 dígitos numéricos.")
+            throw new BusinessException("PRODUTO_CEST_INVALIDO",
+                    "CEST inválido nos dados persistidos: quando informado, deve ter 7 dígitos (0–9).")
                 .With("CestArmazenado", Cest);
 
         ValidarFormatoOrigemIcmsArmazenada(Origem);
@@ -54,15 +56,23 @@ public sealed class DadosFiscais : IEquatable<DadosFiscais>
 
     private static void ValidarFormatoOrigemIcmsArmazenada(string origem)
     {
-        if (string.IsNullOrWhiteSpace(origem) || origem.Length > 8)
-            throw new BusinessException("PRODUTO_ORIGEM_ICMS_INVALIDA", "Origem ICMS armazenada é inválida.")
-                .With("OrigemArmazenada", origem);
+        if (string.IsNullOrWhiteSpace(origem))
+            throw new BusinessException("PRODUTO_ORIGEM_ICMS_INVALIDA",
+                    "Origem ICMS não pode ficar em branco. Informe o código numérico existente nos parâmetros do produto (ex.: 0, 1, 2).")
+                .With("OrigemInformada", origem ?? string.Empty);
+
+        if (origem.Length > 8)
+            throw new BusinessException("PRODUTO_ORIGEM_ICMS_INVALIDA",
+                    $"Origem ICMS aceita no máximo 8 dígitos. Foram informados {origem.Length} caractere(s).")
+                .With("OrigemInformada", origem)
+                .With("TamanhoInformado", origem.Length);
 
         foreach (var c in origem.AsSpan())
         {
             if (c < '0' || c > '9')
-                throw new BusinessException("PRODUTO_ORIGEM_ICMS_INVALIDA", "Origem ICMS armazenada é inválida.")
-                    .With("OrigemArmazenada", origem);
+                throw new BusinessException("PRODUTO_ORIGEM_ICMS_INVALIDA",
+                        "Origem ICMS deve conter apenas dígitos (0–9), sem letras ou símbolos, alinhada à tabela de parâmetros.")
+                    .With("OrigemInformada", origem);
         }
     }
 
@@ -82,10 +92,12 @@ public sealed class DadosFiscais : IEquatable<DadosFiscais>
         if (string.IsNullOrWhiteSpace(ncm))
             throw new BusinessException("PRODUTO_NCM_OBRIGATORIO", "NCM é obrigatório.");
 
-        var digitos = SomenteDigitos(ncm);
+        var digitos = SomenteDigitosAscii(ncm);
         if (digitos.Length != 8)
-            throw new BusinessException("PRODUTO_NCM_INVALIDO", "NCM deve conter exatamente 8 dígitos numéricos.")
-                .With("NcmInformado", ncm);
+            throw new BusinessException("PRODUTO_NCM_INVALIDO",
+                    $"NCM deve conter exatamente 8 dígitos (0-9). Após remover formatação, foram encontrados {digitos.Length} dígito(s).")
+                .With("NcmInformado", ncm)
+                .With("DigitosContados", digitos.Length);
 
         return digitos;
     }
@@ -95,10 +107,12 @@ public sealed class DadosFiscais : IEquatable<DadosFiscais>
         if (string.IsNullOrWhiteSpace(cest))
             return null;
 
-        var digitos = SomenteDigitos(cest);
+        var digitos = SomenteDigitosAscii(cest);
         if (digitos.Length != 7)
-            throw new BusinessException("PRODUTO_CEST_INVALIDO", "CEST, quando informado, deve conter 7 dígitos numéricos.")
-                .With("CestInformado", cest);
+            throw new BusinessException("PRODUTO_CEST_INVALIDO",
+                    $"CEST, quando informado, deve conter 7 dígitos (0-9). Após remover formatação, foram encontrados {digitos.Length} dígito(s).")
+                .With("CestInformado", cest)
+                .With("DigitosContados", digitos.Length);
 
         return digitos;
     }
@@ -113,12 +127,13 @@ public sealed class DadosFiscais : IEquatable<DadosFiscais>
         return o;
     }
 
-    private static string SomenteDigitos(string entrada)
+    /// <summary>Apenas caracteres '0'–'9' ASCII (evita dígitos Unicode que quebram validação posterior).</summary>
+    private static string SomenteDigitosAscii(string entrada)
     {
         var sb = new StringBuilder(entrada.Length);
         foreach (var c in entrada.AsSpan())
         {
-            if (char.IsDigit(c))
+            if (c is >= '0' and <= '9')
                 sb.Append(c);
         }
 

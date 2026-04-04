@@ -8,18 +8,27 @@ using DbMercado.Domain.Produto.Interfaces.UnitsOfWork;
 using DbMercado.Domain.Produto.Queries;
 using DbMercado.Domain.Produto.ValueObjects;
 using DbMercado.Domain.Shared.Exceptions;
+using System.Globalization;
 
 namespace DbMercado.Application.Produto.Services;
 
 public class ProdutoService : IProdutoService
 {
+    private const string DicaParametrosCategoriaProduto =
+        " Verifique os cadastros de parâmetros na categoria de produto (administração do sistema).";
+
     private readonly IUwProduto _uw;
     private readonly IParametroChaveConsultaRepository _parametrosConsulta;
+    private readonly IMidiaService _midiaService;
 
-    public ProdutoService(IUwProduto uw, IParametroChaveConsultaRepository parametrosConsulta)
+    public ProdutoService(
+        IUwProduto uw,
+        IParametroChaveConsultaRepository parametrosConsulta,
+        IMidiaService midiaService)
     {
         _uw = uw;
         _parametrosConsulta = parametrosConsulta;
+        _midiaService = midiaService;
     }
 
     public async Task<IReadOnlyList<ProdutoUnidadeMedidaOpcaoDto>> ListarUnidadesComercializacaoAsync(
@@ -82,6 +91,31 @@ public class ProdutoService : IProdutoService
         return itens.Select(i => new ProdutoUnidadeMedidaOpcaoDto(i.Chave, i.Valor)).ToList();
     }
 
+    public async Task<IReadOnlyList<ProdutoUnidadeMedidaOpcaoDto>> ListarOrigensIcmsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var itens = await _parametrosConsulta.ListarPorCategoriaEAtributoAsync(
+            ProdutoParametrosCatalogo.Categoria,
+            ProdutoParametrosCatalogo.AtributoOrigemIcms,
+            cancellationToken);
+
+        // Uma opção por código (0–8). O seed antigo usava unicidade Chave+Valor, permitindo duas linhas com a mesma Chave.
+        static int OrdemChaveNumerica(string chave) =>
+            int.TryParse(chave.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var n)
+                ? n
+                : int.MaxValue;
+
+        var dedup = itens
+            .GroupBy(i => i.Chave.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.OrderBy(x => x.Valor, StringComparer.Ordinal).First())
+            .OrderBy(x => OrdemChaveNumerica(x.Chave))
+            .ThenBy(x => x.Chave, StringComparer.Ordinal)
+            .Select(i => new ProdutoUnidadeMedidaOpcaoDto(i.Chave, i.Valor))
+            .ToList();
+
+        return dedup;
+    }
+
     public async Task<long> CriarProdutoAsync(string usuarioAutenticado, ProdutoCreateDto dto, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dto);
@@ -141,7 +175,18 @@ public class ProdutoService : IProdutoService
 
         await _uw.ProdutoRepository.AddAsync(usuarioAutenticado, entidade);
         await _uw.SaveChangesAsync(cancellationToken);
-        return entidade.Id;
+
+        var novoId = entidade.Id;
+        if (dto.Midias is { Count: > 0 })
+        {
+            await _midiaService.AssociarAoProdutoAsync(
+                novoId,
+                new MidiaAssociarDto { Itens = dto.Midias.ToList() },
+                usuarioAutenticado,
+                cancellationToken);
+        }
+
+        return novoId;
     }
 
     public async Task AtualizarProdutoAsync(string usuarioAutenticado, long id, ProdutoUpdateDto dto, CancellationToken cancellationToken = default)
@@ -204,6 +249,15 @@ public class ProdutoService : IProdutoService
         entidade.AlterarCategoria(dto.CategoriaProdutoId, usuarioAutenticado);
 
         await _uw.SaveChangesAsync(cancellationToken);
+
+        if (dto.Midias is { Count: > 0 })
+        {
+            await _midiaService.AssociarAoProdutoAsync(
+                id,
+                new MidiaAssociarDto { Itens = dto.Midias.ToList() },
+                usuarioAutenticado,
+                cancellationToken);
+        }
     }
 
     public async Task ExcluirProdutoAsync(string usuarioAutenticado, long id, CancellationToken cancellationToken = default)
@@ -408,7 +462,8 @@ public class ProdutoService : IProdutoService
                 ProdutoParametrosCatalogo.AtributoUnidadeComercializacao,
                 com,
                 cancellationToken))
-            throw new BusinessException("PRODUTO_UNIDADE_COMERCIALIZACAO_CATALOGO", $"Unidade de comercialização '{com}' não está cadastrada nos parâmetros.");
+            throw new BusinessException("PRODUTO_UNIDADE_COMERCIALIZACAO_CATALOGO",
+                $"Unidade de comercialização '{com}' não está cadastrada nos parâmetros.{DicaParametrosCategoriaProduto}");
 
         var fis = NormalizarCodigoParametro(
             dto.UnidadeMedidaFisica,
@@ -419,7 +474,8 @@ public class ProdutoService : IProdutoService
                 ProdutoParametrosCatalogo.AtributoUnidadeMedida,
                 fis,
                 cancellationToken))
-            throw new BusinessException("PRODUTO_UNIDADE_MEDIDA_CATALOGO", $"Unidade de medida física '{fis}' não está cadastrada nos parâmetros.");
+            throw new BusinessException("PRODUTO_UNIDADE_MEDIDA_CATALOGO",
+                $"Unidade de medida física '{fis}' não está cadastrada nos parâmetros.{DicaParametrosCategoriaProduto}");
 
         var emb = NormalizarCodigoParametro(
             dto.TipoEmbalagem,
@@ -430,7 +486,8 @@ public class ProdutoService : IProdutoService
                 ProdutoParametrosCatalogo.AtributoUnidadeEmbalagem,
                 emb,
                 cancellationToken))
-            throw new BusinessException("PRODUTO_TIPO_EMBALAGEM_CATALOGO", $"Tipo de embalagem '{emb}' não está cadastrado nos parâmetros.");
+            throw new BusinessException("PRODUTO_TIPO_EMBALAGEM_CATALOGO",
+                $"Tipo de embalagem '{emb}' não está cadastrado nos parâmetros.{DicaParametrosCategoriaProduto}");
 
         var dimEmb = NormalizarCodigoParametro(
             dto.DimensaoEmbalagem.UnidadeDimensao,
@@ -441,7 +498,8 @@ public class ProdutoService : IProdutoService
                 ProdutoParametrosCatalogo.AtributoUnidadeDimensao,
                 dimEmb,
                 cancellationToken))
-            throw new BusinessException("PRODUTO_EMBALAGEM_UNIDADE_DIMENSAO_CATALOGO", $"Unidade de dimensão '{dimEmb}' não está cadastrada nos parâmetros.");
+            throw new BusinessException("PRODUTO_EMBALAGEM_UNIDADE_DIMENSAO_CATALOGO",
+                $"Unidade de dimensão '{dimEmb}' não está cadastrada nos parâmetros.{DicaParametrosCategoriaProduto}");
 
         var pesoEmb = NormalizarCodigoParametro(
             dto.DimensaoEmbalagem.UnidadePeso,
@@ -452,7 +510,8 @@ public class ProdutoService : IProdutoService
                 ProdutoParametrosCatalogo.AtributoUnidadePeso,
                 pesoEmb,
                 cancellationToken))
-            throw new BusinessException("PRODUTO_EMBALAGEM_UNIDADE_PESO_CATALOGO", $"Unidade de peso '{pesoEmb}' não está cadastrada nos parâmetros.");
+            throw new BusinessException("PRODUTO_EMBALAGEM_UNIDADE_PESO_CATALOGO",
+                $"Unidade de peso '{pesoEmb}' não está cadastrada nos parâmetros.{DicaParametrosCategoriaProduto}");
 
         if (dto.DimensaoProduto is not null)
         {
@@ -465,7 +524,8 @@ public class ProdutoService : IProdutoService
                     ProdutoParametrosCatalogo.AtributoUnidadeDimensao,
                     dimP,
                     cancellationToken))
-                throw new BusinessException("PRODUTO_DIMENSAO_UNIDADE_CATALOGO", $"Unidade de dimensão '{dimP}' não está cadastrada nos parâmetros.");
+                throw new BusinessException("PRODUTO_DIMENSAO_UNIDADE_CATALOGO",
+                    $"Unidade de dimensão '{dimP}' não está cadastrada nos parâmetros.{DicaParametrosCategoriaProduto}");
 
             var pesoP = NormalizarCodigoParametro(
                 dto.DimensaoProduto.UnidadePeso,
@@ -476,7 +536,8 @@ public class ProdutoService : IProdutoService
                     ProdutoParametrosCatalogo.AtributoUnidadePeso,
                     pesoP,
                     cancellationToken))
-                throw new BusinessException("PRODUTO_DIMENSAO_UNIDADE_PESO_CATALOGO", $"Unidade de peso '{pesoP}' não está cadastrada nos parâmetros.");
+                throw new BusinessException("PRODUTO_DIMENSAO_UNIDADE_PESO_CATALOGO",
+                    $"Unidade de peso '{pesoP}' não está cadastrada nos parâmetros.{DicaParametrosCategoriaProduto}");
         }
 
         if (string.IsNullOrWhiteSpace(dto.OrigemGeografica.Tipo))
@@ -488,7 +549,8 @@ public class ProdutoService : IProdutoService
                 ProdutoParametrosCatalogo.AtributoOrigemGeografica,
                 tipoGeo,
                 cancellationToken))
-            throw new BusinessException("PRODUTO_ORIGEM_GEOGRAFICA_CATALOGO", $"Tipo de origem geográfica '{tipoGeo}' não está cadastrado nos parâmetros.");
+            throw new BusinessException("PRODUTO_ORIGEM_GEOGRAFICA_CATALOGO",
+                $"Tipo de origem geográfica '{tipoGeo}' não está cadastrado nos parâmetros.{DicaParametrosCategoriaProduto}");
 
         if (string.IsNullOrWhiteSpace(dto.DadosFiscais.Origem))
             throw new BusinessException("PRODUTO_ORIGEM_ICMS_OBRIGATORIA", "Origem ICMS é obrigatória.");
@@ -499,15 +561,18 @@ public class ProdutoService : IProdutoService
                 ProdutoParametrosCatalogo.AtributoOrigemIcms,
                 origem,
                 cancellationToken))
-            throw new BusinessException("PRODUTO_ORIGEM_ICMS_CATALOGO", $"Origem ICMS '{origem}' não está cadastrada nos parâmetros.");
+            throw new BusinessException("PRODUTO_ORIGEM_ICMS_CATALOGO",
+                $"Origem ICMS '{origem}' não está cadastrada nos parâmetros.{DicaParametrosCategoriaProduto}");
 
         if (dto.CategoriaProdutoId is { } cid)
         {
             var cat = await _uw.Categorias.ObterPorIdAsync(cid, cancellationToken);
             if (cat is null)
-                throw new BusinessException("PRODUTO_CATEGORIA_NAO_ENCONTRADA", "Categoria de produto informada não existe.");
+                throw new BusinessException("PRODUTO_CATEGORIA_NAO_ENCONTRADA",
+                    $"Não existe categoria de produto com o identificador {cid}. Verifique o código enviado ou cadastre a categoria antes de vincular.");
             if (!cat.Ativo)
-                throw new BusinessException("PRODUTO_CATEGORIA_INATIVA", "Não é possível vincular produto a uma categoria inativa.");
+                throw new BusinessException("PRODUTO_CATEGORIA_INATIVA",
+                    $"A categoria '{cat.Nome}' (id {cid}) está inativa. Ative a categoria ou escolha outra para vincular o produto.");
         }
     }
 
@@ -518,12 +583,16 @@ public class ProdutoService : IProdutoService
 
         var c = codigo.Trim().ToUpperInvariant();
         if (c.Length == 0 || c.Length > 16)
-            throw new BusinessException(errorCode, errorMessage).With("CodigoInformado", codigo);
+            throw new BusinessException(errorCode,
+                    $"{errorMessage} O código deve ter de 1 a 16 caracteres alfanuméricos, sem espaços.")
+                .With("CodigoInformado", codigo);
 
         foreach (var ch in c.AsSpan())
         {
             if (!char.IsLetterOrDigit(ch))
-                throw new BusinessException(errorCode, errorMessage).With("CodigoInformado", codigo);
+                throw new BusinessException(errorCode,
+                        $"{errorMessage} Use apenas letras e números (A–Z, 0–9), sem espaços ou símbolos.")
+                    .With("CodigoInformado", codigo);
         }
 
         return c;

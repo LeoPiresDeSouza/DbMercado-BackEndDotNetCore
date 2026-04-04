@@ -931,6 +931,67 @@ namespace DbMercado.Infrastructure.Shared.Migrations
                     b.ToTable("prdCategoria", (string)null);
                 });
 
+            modelBuilder.Entity("DbMercado.Domain.Produto.Entities.MidiaEntity", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DataUltimaAlteracao")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("Duracao")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<bool>("IsPrincipal")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Ordem")
+                        .HasColumnType("int");
+
+                    b.Property<long?>("ProdutoId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("ThumbnailUrl")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("UsuarioCriacao")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UsuarioUltimaAlteracao")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProdutoId");
+
+                    b.ToTable("prdMidia", (string)null);
+                });
+
             modelBuilder.Entity("DbMercado.Domain.Produto.Entities.ProdutoEntity", b =>
                 {
                     b.Property<long>("Id")
@@ -1437,6 +1498,16 @@ namespace DbMercado.Infrastructure.Shared.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("CategoriaPai");
+                });
+
+            modelBuilder.Entity("DbMercado.Domain.Produto.Entities.MidiaEntity", b =>
+                {
+                    b.HasOne("DbMercado.Domain.Produto.Entities.ProdutoEntity", "Produto")
+                        .WithMany()
+                        .HasForeignKey("ProdutoId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Produto");
                 });
 
             modelBuilder.Entity("DbMercado.Domain.Produto.Entities.ProdutoEntity", b =>

@@ -43,6 +43,7 @@ public class AppDbContext: IdentityDbContext<IdentityUser>
     public DbSet<ProdutoEntity> Produtos => Set<ProdutoEntity>();
     public DbSet<SkuEntity> Skus => Set<SkuEntity>();
     public DbSet<CategoriaProdutoEntity> CategoriasProduto => Set<CategoriaProdutoEntity>();
+    public DbSet<MidiaEntity> MidiasProduto => Set<MidiaEntity>();
 
     
 
