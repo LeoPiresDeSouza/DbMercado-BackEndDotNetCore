@@ -6,6 +6,7 @@ using DbMercado.Infrastructure.Administracao.Repositories.Administracao;
 using DbMercado.Infrastructure.Administracao.Repositories.Identity;
 using DbMercado.Infrastructure.Shared.Data;
 using DbMercado.Infrastructure.Shared.Interfaces;
+using DbMercado.Infrastructure.Shared.UnitsOfWork;
 
 namespace DbMercado.Infrastructure.Administracao.UnitsOfWork;
 
@@ -13,7 +14,7 @@ public class UwAdministracao : IUwAdministracao
 {
     private readonly AppDbContext _context;
     private readonly IRepositoryFactory _repoFactory;
-    private readonly IApplicationCachingFactory _cachingFactory;
+    private readonly IApplicationCachingFactory _cacheFactory;
 
     private IModuloRepository? _moduloRepository;
     private IUsuarioIdentityRepository? _usuarioIdentityRepository;
@@ -22,11 +23,11 @@ public class UwAdministracao : IUwAdministracao
     public UwAdministracao(
         AppDbContext context,
         IRepositoryFactory repoFactory,
-        IApplicationCachingFactory cachingFactory)
+        IApplicationCachingFactory cacheFactory)
     {
         _context = context;
         _repoFactory = repoFactory;
-        _cachingFactory = cachingFactory;
+        _cacheFactory = cacheFactory;
     }
 
     public IModuloRepository ModuloRepository =>
@@ -39,7 +40,15 @@ public class UwAdministracao : IUwAdministracao
     /// Fora do <see cref="IRepositoryFactory"/> para evitar falhas do <c>ActivatorUtilities</c> com o cache genérico.
     /// </summary>
     public IRefreshTokenRepository RefreshTokenRepository =>
-        _refreshTokenRepository ??= new RefreshTokenRepository(_context, _cachingFactory.GetApplicationCaching<RefreshTokenEntity>());
+        _refreshTokenRepository ??= new RefreshTokenRepository(_context);
 
-    public Task<int> SaveChangesAsync() => _context.SaveChangesAsync();
+    public async Task<int> SaveChangesAsync()
+    {
+        var linhas = await _context.SaveChangesAsync();
+        UnitOfWorkCacheInvalidacao.AposSaveSeAlterou(
+            _cacheFactory,
+            linhas,
+            UnitOfWorkCacheInvalidacao.Administracao);
+        return linhas;
+    }
 }

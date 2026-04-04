@@ -75,6 +75,50 @@ public class DbInitializer
                                 "Quantidade máxima de logs a ser mantida na tabela após a sua limpeza.",
                                 dataCarga,
                                 usuarioCarga);
+        AddParametroIfNotExists(context,
+                                "Log",
+                                "Limpeza",
+                                "Job",
+                                "0 0 3 * * ?",
+                                "Expressão cron Quartz (UTC) do job de limpeza de dbAppLog. Lida na inicialização da API; appsettings Quartz:LogCleanup:CronSchedule é fallback se vazio.",
+                                dataCarga,
+                                usuarioCarga);
+
+        AddParametroIfNotExists(context,
+                                "Quartz",
+                                "LimpezaMidiasTemporarias",
+                                "CronSchedule",
+                                "0 30 3 * * ?",
+                                "Expressão cron Quartz (UTC) do job LimpezaMidiasTemporarias. Lida na inicialização da API; appsettings é fallback se vazio.",
+                                dataCarga,
+                                usuarioCarga);
+
+        AddParametroIfNotExists(context,
+                                "Quartz",
+                                "MarketplaceSync",
+                                "CronSchedule",
+                                "0 0 * * * ?",
+                                "Reservado: cron (UTC) para futuro job de sincronização com marketplaces. Lida na inicialização quando o job existir.",
+                                dataCarga,
+                                usuarioCarga);
+
+        AddParametroIfNotExists(context,
+                                "Quartz",
+                                "ConciliacaoFinanceira",
+                                "CronSchedule",
+                                "0 0 6 * * ?",
+                                "Reservado: cron (UTC) para futuro job de conciliação financeira.",
+                                dataCarga,
+                                usuarioCarga);
+
+        AddParametroIfNotExists(context,
+                                "Quartz",
+                                "Reprocessamento",
+                                "CronSchedule",
+                                "0 0/30 * * * ?",
+                                "Reservado: cron (UTC) para futuro job de reprocessamento.",
+                                dataCarga,
+                                usuarioCarga);
 
         // Tipo de Sexo
 
@@ -1264,6 +1308,15 @@ public class DbInitializer
             usuarioCarga);
 
         AddFuncionalidadeIfNotExists(context,
+            "administracao",
+            "execucoesdejobs",
+            "Execuções de jobs",
+            "Histórico de execuções dos jobs agendados (Quartz).",
+            3,
+            dataCarga,
+            usuarioCarga);
+
+        AddFuncionalidadeIfNotExists(context,
             "produtos",
             "cadastroprodutos",
             "Cadastro de Produtos",
@@ -1329,6 +1382,8 @@ public class DbInitializer
         AddPermissaoIfNotExists(context, "controledelogs", "excluirEntrada", dataCarga, usuarioCarga);
         AddPermissaoIfNotExists(context, "controledelogs", "limparLog", dataCarga, usuarioCarga);
         AddPermissaoIfNotExists(context, "controledelogs", "descarregarParaDisco", dataCarga, usuarioCarga);
+
+        AddPermissaoIfNotExists(context, "execucoesdejobs", "acessar", dataCarga, usuarioCarga);
 
         AddPermissaoIfNotExists(context, "cadastroprodutos", "criar", dataCarga, usuarioCarga);
         AddPermissaoIfNotExists(context, "cadastroprodutos", "ler", dataCarga, usuarioCarga);

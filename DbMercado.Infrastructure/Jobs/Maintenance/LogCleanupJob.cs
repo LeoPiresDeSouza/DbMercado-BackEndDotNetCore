@@ -1,8 +1,6 @@
-using DbMercado.Domain.Shared.Entities;
+using DbMercado.Application.Administracao.Interfaces;
 using DbMercado.Infrastructure.Jobs.Abstractions;
 using DbMercado.Infrastructure.Jobs.Configuration;
-using DbMercado.Infrastructure.Shared.Data;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -11,7 +9,7 @@ using Quartz;
 namespace DbMercado.Infrastructure.Jobs.Maintenance;
 
 /// <summary>
-/// Remove registros antigos da tabela de log da aplicação (<c>dbAppLog</c>).
+/// Executa a política de limpeza de <c>dbAppLog</c> (min/max registros + backup em disco), igual a <c>POST /api/app-logs/limpeza</c>.
 /// </summary>
 [DisallowConcurrentExecution]
 public sealed class LogCleanupJob : ScopedBackgroundJob
@@ -40,19 +38,12 @@ public sealed class LogCleanupJob : ScopedBackgroundJob
             return;
         }
 
-        var retentionDays = Math.Clamp(opt.RetentionDays, 1, 3650);
-        var cutoff = DateTimeOffset.UtcNow.AddDays(-retentionDays);
-
-        var db = serviceProvider.GetRequiredService<AppDbContext>();
-
-        var deleted = await db.Set<AppLogEntity>()
-            .Where(e => e.CreatedAt < cutoff)
-            .ExecuteDeleteAsync(context.CancellationToken);
+        var appLog = serviceProvider.GetRequiredService<IAppLogService>();
+        var result = await appLog.ExecutarLimpezaAsync(context.CancellationToken);
 
         _logger.LogInformation(
-            "LogCleanupJob: removidos {Deleted} registro(s) com CreatedAt anterior a {Cutoff:O} (retenção {RetentionDays} dia(s)).",
-            deleted,
-            cutoff,
-            retentionDays);
+            "LogCleanupJob: excluídos {Excluidos} registro(s). Backup: {Backup}.",
+            result.RegistrosExcluidos,
+            result.ArquivoBackup ?? "(nenhum)");
     }
 }

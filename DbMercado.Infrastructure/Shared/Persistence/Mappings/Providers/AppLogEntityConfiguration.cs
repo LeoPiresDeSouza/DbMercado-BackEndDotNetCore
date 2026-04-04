@@ -34,6 +34,8 @@ public class AppLogEntityConfiguration : IEntityTypeConfiguration<AppLogEntity>
 
         builder.HasIndex(u => u.CreatedAt).IsUnique(false);
         builder.HasIndex(u => u.UserId).IsUnique(false);
+        /// <summary>Agenda típica: filtro por intervalo de data + nível e ordenação por <c>CreatedAt</c>.</summary>
+        builder.HasIndex(e => new { e.CreatedAt, e.Level }).IsUnique(false);
 
         #endregion Índices
     }

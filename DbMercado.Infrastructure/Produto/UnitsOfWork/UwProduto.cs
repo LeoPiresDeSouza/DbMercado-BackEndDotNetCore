@@ -3,6 +3,7 @@ using DbMercado.Domain.Produto.Interfaces.UnitsOfWork;
 using DbMercado.Infrastructure.Produto.Repositories;
 using DbMercado.Infrastructure.Shared.Data;
 using DbMercado.Infrastructure.Shared.Interfaces;
+using DbMercado.Infrastructure.Shared.UnitsOfWork;
 
 namespace DbMercado.Infrastructure.Produto.UnitsOfWork;
 
@@ -10,6 +11,7 @@ public class UwProduto : IUwProduto
 {
     private readonly AppDbContext _context;
     private readonly IRepositoryFactory _repoFactory;
+    private readonly IApplicationCachingFactory _cacheFactory;
 
     private IProdutoRepository? _produtoRepository;
 
@@ -17,10 +19,14 @@ public class UwProduto : IUwProduto
 
     private IMidiaRepository? _midias;
 
-    public UwProduto(AppDbContext context, IRepositoryFactory repoFactory)
+    public UwProduto(
+        AppDbContext context,
+        IRepositoryFactory repoFactory,
+        IApplicationCachingFactory cacheFactory)
     {
         _context = context;
         _repoFactory = repoFactory;
+        _cacheFactory = cacheFactory;
     }
 
     public IProdutoRepository ProdutoRepository =>
@@ -32,6 +38,13 @@ public class UwProduto : IUwProduto
     public IMidiaRepository Midias =>
         _midias ??= _repoFactory.Create<MidiaRepository>(_context);
 
-    public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
-        _context.SaveChangesAsync(cancellationToken);
+    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        var linhas = await _context.SaveChangesAsync(cancellationToken);
+        UnitOfWorkCacheInvalidacao.AposSaveSeAlterou(
+            _cacheFactory,
+            linhas,
+            UnitOfWorkCacheInvalidacao.Produto);
+        return linhas;
+    }
 }

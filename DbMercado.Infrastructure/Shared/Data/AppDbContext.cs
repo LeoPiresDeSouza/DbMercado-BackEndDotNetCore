@@ -22,6 +22,7 @@ public class AppDbContext: IdentityDbContext<IdentityUser>
     }
 
     public DbSet<AppLogEntity> AppLogEntries => Set<AppLogEntity>();
+    public DbSet<JobExecucaoEntity> JobExecucoes => Set<JobExecucaoEntity>();
     public DbSet<ModuloEntity> Modulos => Set<ModuloEntity>();
     public DbSet<FuncionalidadeEntity> Funcionalidades=> Set<FuncionalidadeEntity>();
     public DbSet<PermissaoEntity> Permissoes => Set<PermissaoEntity>();

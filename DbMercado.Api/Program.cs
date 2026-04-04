@@ -8,6 +8,7 @@ using DbMercado.Application.Produto.Interfaces;
 using DbMercado.Application.Produto.Services;
 using DbMercado.Infrastructure.Produto.Services;
 using DbMercado.Domain.Shared;
+using DbMercado.Domain.Shared.Interfaces.Repositories;
 using DbMercado.CrossCutting.Settings;
 using DbMercado.Domain.Administracao.Interfaces.Repositories;
 using DbMercado.Domain.Administracao.Interfaces.Services.Autenticacao;
@@ -15,17 +16,18 @@ using DbMercado.Domain.Administracao.Interfaces.UnitsOfWork;
 using DbMercado.Domain.Importacao.Interfaces.UnitsOfWork;
 using DbMercado.Domain.Produto.Interfaces.UnitsOfWork;
 using DbMercado.Infrastructure.Administracao.Repositories;
+using DbMercado.Infrastructure.Administracao.Services;
 using DbMercado.Infrastructure.Administracao.Services.Autenticacao;
 using DbMercado.Infrastructure.Administracao.UnitsOfWork;
 using DbMercado.Infrastructure.Importacao.UnitsOfWork;
 using DbMercado.Infrastructure.Produto.UnitsOfWork;
+using DbMercado.Infrastructure.Shared.Repositories;
 using DbMercado.Infrastructure.Providers.Logging;
 using DbMercado.Infrastructure.Providers.CEP;
 using DbMercado.Infrastructure.Shared.Data;
 using DbMercado.Infrastructure.Shared.HTTP;
 using DbMercado.Infrastructure.Shared.Interfaces;
 using DbMercado.Infrastructure.Jobs.DependencyInjection;
-using DbMercado.Infrastructure.Shared.Repositories;
 using DeepBlues.Infrastructure.Providers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -135,6 +137,8 @@ const string JwtSecretDevelopmentFallback =
 
 var jwtSection = builder.Configuration.GetSection("JwtSettings");
 builder.Services.Configure<JwtSettings>(jwtSection);
+builder.Services.Configure<LogBackupStorageOptions>(
+    builder.Configuration.GetSection(LogBackupStorageOptions.SectionName));
 builder.Services.PostConfigure<JwtSettings>(opts =>
 {
     if (builder.Environment.IsDevelopment() && string.IsNullOrWhiteSpace(opts.Secret))
@@ -332,6 +336,8 @@ builder.Services.AddScoped<IApplicationCachingFactory, ApplicationCachingFactory
 builder.Services.AddTransient(typeof(IApplicationCachingService<>), typeof(ApplicationCachingService<>));
 builder.Services.AddScoped<IRepositoryFactory, RepositoryFactory>();
 builder.Services.AddScoped<IParametroChaveConsultaRepository, ParametroChaveConsultaRepository>();
+builder.Services.AddScoped<IAppLogRepository, AppLogRepository>();
+builder.Services.AddScoped<IJobExecucaoRepository, JobExecucaoRepository>();
 
 #endregion Injeção de dependância de repositários
 
@@ -362,6 +368,11 @@ builder.Services.AddScoped<IProdutoService, ProdutoService>();
 builder.Services.AddScoped<ICategoriaProdutoService, CategoriaProdutoService>();
 builder.Services.AddScoped<IMidiaArquivoStorage, MidiaArquivoStorage>();
 builder.Services.AddScoped<IMidiaService, MidiaService>();
+
+builder.Services.AddScoped<IPermissaoUsuarioResolver, PermissaoUsuarioResolver>();
+builder.Services.AddScoped<IAppLogBackupStoragePaths, AppLogBackupStoragePaths>();
+builder.Services.AddScoped<IAppLogService, AppLogService>();
+builder.Services.AddScoped<IJobExecucaoAdministracaoService, JobExecucaoAdministracaoService>();
 
 #endregion Injeção de dependência de serviços
 

@@ -39,15 +39,15 @@ public class JobScheduleOptions
 {
     public bool Enabled { get; set; }
 
-    /// <summary>Expressão cron no formato Quartz (ex.: <c>0 0 3 * * ?</c> diariamente às 03:00 UTC).</summary>
+    /// <summary>
+    /// Fallback da expressão cron Quartz (ex.: <c>0 0 3 * * ?</c> às 03:00 UTC) quando o parâmetro correspondente na tabela estiver ausente ou vazio.
+    /// </summary>
     public string CronSchedule { get; set; } = "0 0 3 * * ?";
 }
 
-/// <summary>Limpeza de logs persistidos na tabela de aplicação (<c>dbAppLog</c>).</summary>
+/// <summary>Limpeza de logs persistidos na tabela de aplicação (<c>dbAppLog</c>) via política em parâmetros Log/Limpeza.</summary>
 public sealed class LogCleanupJobOptions : JobScheduleOptions
 {
-    /// <summary>Dias de retenção; registros com <c>CreatedAt</c> anteriores a esse período são excluídos.</summary>
-    public int RetentionDays { get; set; } = 90;
 }
 
 /// <summary>Mídias em <c>temporario</c> com <c>DataCriacao</c> anterior ao cutoff são excluídas.</summary>

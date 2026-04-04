@@ -4,6 +4,7 @@ using DbMercado.Infrastructure.Shared.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DbMercado.Infrastructure.Shared.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260404193543_IndexAppLogCreatedAtLevel")]
+    partial class IndexAppLogCreatedAtLevel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1172,67 +1175,6 @@ namespace DbMercado.Infrastructure.Shared.Migrations
                     b.HasIndex("CreatedAt", "Level");
 
                     b.ToTable("dbAppLog", (string)null);
-                });
-
-            modelBuilder.Entity("DbMercado.Domain.Shared.Entities.JobExecucaoEntity", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<long?>("DuracaoMs")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTimeOffset?>("FimUtc")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("FireInstanceId")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<DateTimeOffset>("InicioUtc")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("JobGrupo")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("JobNome")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<string>("MensagemErro")
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
-
-                    b.Property<bool?>("Sucesso")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("TriggerGrupo")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("TriggerNome")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FireInstanceId")
-                        .IsUnique();
-
-                    b.HasIndex("InicioUtc");
-
-                    b.HasIndex("JobNome", "JobGrupo", "InicioUtc");
-
-                    b.ToTable("dbJobExecucao", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>

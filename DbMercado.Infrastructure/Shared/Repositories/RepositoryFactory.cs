@@ -38,12 +38,9 @@ public class RepositoryFactory : IRepositoryFactory
 
     public TRepository Create<TRepository>(AppDbContext context) where TRepository : class
     {
-        // Atalho explícito: evita ActivatorUtilities + reflexão frágil (GetMethod em método genérico).
+        // Atalho explícito: refresh token não usa cache de aplicação (consistência de revogação).
         if (typeof(TRepository) == typeof(RefreshTokenRepository))
-        {
-            var cache = _cacheFactory.GetApplicationCaching<RefreshTokenEntity>();
-            return (TRepository)(object)new RefreshTokenRepository(context, cache);
-        }
+            return (TRepository)(object)new RefreshTokenRepository(context);
 
         // Descubro qual é a entidade do repositório (ex: ModuloEntity)
         // Isso assume que os repositórios herdam de BaseRepository<TEntity>

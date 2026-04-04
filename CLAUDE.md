@@ -274,6 +274,16 @@ builder.OwnsOne(p => p.MeuValueObject, vo => {
 });
 ```
 
+### Cache em memória (`IApplicationCachingService<TEntity>`)
+- **Onde fica:** `DeepBlues.Infrastructure.Providers` (`ApplicationCachingService`, `CachePolicy`, TTL em `CachePolicyOptions`).
+- **Registro:** `Program.cs` — `AddTransient(typeof(IApplicationCachingService<>), typeof(ApplicationCachingService<>))` e `IApplicationCachingFactory`.
+- **Uso em repositório:** `GetOrCreateAsync(policy, chaveSemPrefixo, factory)` — a chave final inclui prefixo da app, nome completo do tipo `TEntity` e a política (invalidação em lote por `InvalidateEntity()` agrupa por esse `TEntity`).
+- **Políticas:** `LongTerm` — parâmetros de catálogo e referências pouco voláteis; `MediumTerm` — árvore de categorias, módulos do usuário (dados que mudam com cadastro mas não a cada request); `ShortTerm` — resultados muito voláteis.
+- **Chaves:** incluir na chave tudo o que diferencia o resultado (ex.: `ModulosUsuarioAsync` usa usuário + fingerprint das permissões).
+- **Invalidação (padrão obrigatório):** toda `IUw*` na Infrastructure implementa `SaveChangesAsync` chamando o `DbContext` e, **se o número de linhas afetadas for maior que zero**, `UnitOfWorkCacheInvalidacao.AposSaveSeAlterou(_cacheFactory, linhas, UnitOfWorkCacheInvalidacao.Administracao|Produto|Importacao)`. Os escopos e tipos `TEntity` invalidados por contexto estão centralizados em `DbMercado.Infrastructure/Shared/UnitsOfWork/UnitOfWorkCacheInvalidacao.cs` — ao criar nova UoW ou novo repositório que persista outra entidade com cache, **atualize esse arquivo** (novo método estático se for bounded context novo). Serviços da Application **não** chamam `InvalidateEntity`; evite `SaveChanges` direto no `AppDbContext` fora da UoW (senão o cache pode ficar stale).
+- **O que não cachear:** refresh tokens, grids de auditoria, listagens SSRM de produtos/pedidos com filtros dinâmicos, qualquer leitura que precise refletir escrita imediata.
+- **Repositórios `BaseRepository<T>` sem uso de cache:** podem manter `IApplicationCachingService<TEntity> _` no construtor **somente** porque o `RepositoryFactory` injeta o serviço genérico por reflexão.
+
 ---
 
 ## 7. Estrutura de pastas por bounded context

@@ -5,24 +5,18 @@ using System.Threading.Tasks;
 using DbMercado.Domain.Administracao.Entities;
 using DbMercado.Domain.Administracao.Interfaces.Repositories;
 using DbMercado.Infrastructure.Shared.Data;
-using DbMercado.Infrastructure.Shared.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace DbMercado.Infrastructure.Administracao.Repositories.Administracao
 {
     /// <summary>
-    /// Repositório de Refresh Token
+    /// Repositório de Refresh Token.
+    /// Não utiliza <c>IApplicationCachingService</c>: revogação e validade exigem leitura sempre consistente com o banco.
     /// </summary>
     public class RefreshTokenRepository : BaseRepository<RefreshTokenEntity>, IRefreshTokenRepository
     {
-        /// <summary>Cache alinhado ao <see cref="RepositoryFactory"/> (mesma assinatura que <see cref="ModuloRepository"/>).</summary>
-        private readonly IApplicationCachingService<RefreshTokenEntity> _cache;
-
-        public RefreshTokenRepository(
-            AppDbContext context,
-            IApplicationCachingService<RefreshTokenEntity> cache) : base(context)
+        public RefreshTokenRepository(AppDbContext context) : base(context)
         {
-            _cache = cache;
         }
 
         /// <summary>
