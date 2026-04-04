@@ -55,16 +55,24 @@ public class DbInitializer
                                 "Log",
                                 "Limpeza",
                                 "DiasLimpeza",
-                                "30",
-                                "Número de dias para manter os logs antes de serem elegíveis para limpeza.",
+                                "1",
+                                "Número de dias para manter os logs em disco antes de serem excluídos.",
                                 dataCarga,
                                 usuarioCarga);
         AddParametroIfNotExists(context,
                                 "Log",
                                 "Limpeza",
                                 "MinimoRegistros",
-                                "5000",
+                                "50",
                                 "Quantidade mínima de logs a ser mantida na tabela após a sua limpeza.",
+                                dataCarga,
+                                usuarioCarga);
+        AddParametroIfNotExists(context,
+                                "Log",
+                                "Limpeza",
+                                "MaximoRegistros",
+                                "100",
+                                "Quantidade máxima de logs a ser mantida na tabela após a sua limpeza.",
                                 dataCarga,
                                 usuarioCarga);
 
@@ -304,11 +312,8 @@ public class DbInitializer
     }
 
     /// <summary>
-    /// Carga incremental de produtos fictícios (um registro por GTIN, se ainda não existir).
-    /// Se as tabelas de produto não existirem (erro 208), registra aviso: aplicar migrações EF (<c>prdProduto</c>).
-    /// </summary>
-    /// <summary>
-    /// Seed incremental de categorias. Retorna dicionário slug → Id para uso no seed de produtos.
+    /// Seed incremental de categorias alinhado a <c>docs/REVISAO_SEEDER_CATEGFORIAS.md</c> (até 4 níveis).
+    /// Nomes de ramos repetidos no documento foram diferenciados para garantir slugs únicos (<see cref="EnsureCategoria"/>).
     /// </summary>
     private static Dictionary<string, long> AddCategorias(
         AppDbContext context,
@@ -317,38 +322,133 @@ public class DbInitializer
     {
         var mapa = new Dictionary<string, long>();
 
-        var alimentos = EnsureCategoria(context, "Alimentos", null, dataCarga, usuarioCarga);
-        var higieneBeleza = EnsureCategoria(context, "Higiene e Beleza", null, dataCarga, usuarioCarga);
+        // ── Nível 1 ──
+        var fitness = EnsureCategoria(context, "Fitness", null, dataCarga, usuarioCarga);
         var eletronicos = EnsureCategoria(context, "Eletrônicos", null, dataCarga, usuarioCarga);
-        var utilidades = EnsureCategoria(context, "Utilidades", null, dataCarga, usuarioCarga);
-        _ = EnsureCategoria(context, "Fitness", null, dataCarga, usuarioCarga);
-
+        var utilidadesDomesticas = EnsureCategoria(context, "Utilidades Domésticas", null, dataCarga, usuarioCarga);
+        var celularesTelefonia = EnsureCategoria(context, "Celulares e Telefonia", null, dataCarga, usuarioCarga);
+        var informatica = EnsureCategoria(context, "Informática", null, dataCarga, usuarioCarga);
         context.SaveChanges();
 
-        var graos = EnsureCategoria(context, "Grãos e Cereais", alimentos.Id, dataCarga, usuarioCarga);
-        var oleos = EnsureCategoria(context, "Óleos e Condimentos", alimentos.Id, dataCarga, usuarioCarga);
-        _ = EnsureCategoria(context, "Bebidas", alimentos.Id, dataCarga, usuarioCarga);
-        var cafe = EnsureCategoria(context, "Café e Derivados", alimentos.Id, dataCarga, usuarioCarga);
-        var limpeza = EnsureCategoria(context, "Limpeza", utilidades.Id, dataCarga, usuarioCarga);
-        _ = EnsureCategoria(context, "Cuidado Pessoal", higieneBeleza.Id, dataCarga, usuarioCarga);
-        var informatica = EnsureCategoria(context, "Informática", eletronicos.Id, dataCarga, usuarioCarga);
+        // ── Nível 2 ──
+        var musculacao = EnsureCategoria(context, "Musculação", fitness.Id, dataCarga, usuarioCarga);
+        var cardio = EnsureCategoria(context, "Cardio", fitness.Id, dataCarga, usuarioCarga);
+        var funcional = EnsureCategoria(context, "Funcional", fitness.Id, dataCarga, usuarioCarga);
+        var yogaPilates = EnsureCategoria(context, "Yoga & Pilates", fitness.Id, dataCarga, usuarioCarga);
 
+        var audio = EnsureCategoria(context, "Áudio", eletronicos.Id, dataCarga, usuarioCarga);
+        var video = EnsureCategoria(context, "Vídeo", eletronicos.Id, dataCarga, usuarioCarga);
+        var seguranca = EnsureCategoria(context, "Segurança", eletronicos.Id, dataCarga, usuarioCarga);
+        var acessoriosEletronicos = EnsureCategoria(context, "Acessórios Eletrônicos", eletronicos.Id, dataCarga, usuarioCarga);
+
+        var cozinha = EnsureCategoria(context, "Cozinha", utilidadesDomesticas.Id, dataCarga, usuarioCarga);
+        var organizacao = EnsureCategoria(context, "Organização", utilidadesDomesticas.Id, dataCarga, usuarioCarga);
+        var limpeza = EnsureCategoria(context, "Limpeza", utilidadesDomesticas.Id, dataCarga, usuarioCarga);
+        var lavanderia = EnsureCategoria(context, "Lavanderia", utilidadesDomesticas.Id, dataCarga, usuarioCarga);
+
+        var smartphones = EnsureCategoria(context, "Smartphones", celularesTelefonia.Id, dataCarga, usuarioCarga);
+        var acessoriosTelefonia = EnsureCategoria(context, "Acessórios para Telefonia", celularesTelefonia.Id, dataCarga, usuarioCarga);
+        var pecasReposicao = EnsureCategoria(context, "Peças e Reposição", celularesTelefonia.Id, dataCarga, usuarioCarga);
+
+        var computadores = EnsureCategoria(context, "Computadores", informatica.Id, dataCarga, usuarioCarga);
+        var perifericos = EnsureCategoria(context, "Periféricos", informatica.Id, dataCarga, usuarioCarga);
+        var componentes = EnsureCategoria(context, "Componentes", informatica.Id, dataCarga, usuarioCarga);
+        var redes = EnsureCategoria(context, "Redes", informatica.Id, dataCarga, usuarioCarga);
         context.SaveChanges();
 
-        var arroz = EnsureCategoria(context, "Arroz", graos.Id, dataCarga, usuarioCarga);
-        var azeites = EnsureCategoria(context, "Azeites", oleos.Id, dataCarga, usuarioCarga);
-        var detergentes = EnsureCategoria(context, "Detergentes", limpeza.Id, dataCarga, usuarioCarga);
-        var notebooks = EnsureCategoria(context, "Notebooks", informatica.Id, dataCarga, usuarioCarga);
-        var cafesTorrados = EnsureCategoria(context, "Cafés Torrados", cafe.Id, dataCarga, usuarioCarga);
+        // ── Nível 3 ──
+        var pesosLivres = EnsureCategoria(context, "Pesos Livres", musculacao.Id, dataCarga, usuarioCarga);
+        var maquinas = EnsureCategoria(context, "Máquinas", musculacao.Id, dataCarga, usuarioCarga);
+        var equipamentosCardio = EnsureCategoria(context, "Equipamentos para Cardio", cardio.Id, dataCarga, usuarioCarga);
+        var acessoriosTreinoFuncional = EnsureCategoria(context, "Acessórios para Treino Funcional", funcional.Id, dataCarga, usuarioCarga);
+        var equipamentosYoga = EnsureCategoria(context, "Equipamentos para Yoga e Pilates", yogaPilates.Id, dataCarga, usuarioCarga);
 
+        var equipamentosAudio = EnsureCategoria(context, "Equipamentos de Áudio", audio.Id, dataCarga, usuarioCarga);
+        var fones = EnsureCategoria(context, "Fones", audio.Id, dataCarga, usuarioCarga);
+        var televisores = EnsureCategoria(context, "Televisores", video.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Projetores", video.Id, dataCarga, usuarioCarga);
+        var monitoramento = EnsureCategoria(context, "Monitoramento", seguranca.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Cabos", acessoriosEletronicos.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Adaptadores", acessoriosEletronicos.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Fontes", acessoriosEletronicos.Id, dataCarga, usuarioCarga);
+
+        var utensilios = EnsureCategoria(context, "Utensílios", cozinha.Id, dataCarga, usuarioCarga);
+        var panelas = EnsureCategoria(context, "Panelas", cozinha.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Caixas Organizadoras", organizacao.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Organizadores de Armário", organizacao.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Organizadores Multiuso", organizacao.Id, dataCarga, usuarioCarga);
+        var equipamentosLimpeza = EnsureCategoria(context, "Equipamentos para Limpeza", limpeza.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Produtos de Limpeza", limpeza.Id, dataCarga, usuarioCarga);
+        var acessoriosLavanderia = EnsureCategoria(context, "Acessórios de Lavanderia", lavanderia.Id, dataCarga, usuarioCarga);
+
+        _ = EnsureCategoria(context, "Android", smartphones.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "iOS", smartphones.Id, dataCarga, usuarioCarga);
+        var protecaoTelefonia = EnsureCategoria(context, "Proteção", acessoriosTelefonia.Id, dataCarga, usuarioCarga);
+        var energiaTelefonia = EnsureCategoria(context, "Energia", acessoriosTelefonia.Id, dataCarga, usuarioCarga);
+        var audioMovel = EnsureCategoria(context, "Áudio Móvel", acessoriosTelefonia.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Baterias", pecasReposicao.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Telas", pecasReposicao.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Conectores", pecasReposicao.Id, dataCarga, usuarioCarga);
+
+        _ = EnsureCategoria(context, "Notebooks", computadores.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Desktops", computadores.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Teclados", perifericos.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Mouses", perifericos.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Monitores", perifericos.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Memória RAM", componentes.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "SSD e HD", componentes.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Placas de Vídeo", componentes.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Roteadores", redes.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Switches", redes.Id, dataCarga, usuarioCarga);
         context.SaveChanges();
 
-        EnsureCategoria(context, "Parboilizado", arroz.Id, dataCarga, usuarioCarga);
-        EnsureCategoria(context, "Extra Virgem", azeites.Id, dataCarga, usuarioCarga);
-        EnsureCategoria(context, "Multiuso", detergentes.Id, dataCarga, usuarioCarga);
-        EnsureCategoria(context, "Ultrafinos", notebooks.Id, dataCarga, usuarioCarga);
-        EnsureCategoria(context, "Em Grãos", cafesTorrados.Id, dataCarga, usuarioCarga);
+        // ── Nível 4 (folhas) ──
+        _ = EnsureCategoria(context, "Halteres", pesosLivres.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Barras", pesosLivres.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Anilhas", pesosLivres.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Estações de Musculação", maquinas.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Leg Press", maquinas.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Supino", maquinas.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Esteiras", equipamentosCardio.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Bicicletas Ergométricas", equipamentosCardio.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Elípticos", equipamentosCardio.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Kettlebell", acessoriosTreinoFuncional.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Cordas", acessoriosTreinoFuncional.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Medicine Ball", acessoriosTreinoFuncional.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Colchonetes", equipamentosYoga.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Bolas", equipamentosYoga.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Faixas Elásticas", equipamentosYoga.Id, dataCarga, usuarioCarga);
 
+        _ = EnsureCategoria(context, "Caixas de Som", equipamentosAudio.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Soundbars", equipamentosAudio.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Amplificadores", equipamentosAudio.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "In-Ear", fones.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Over-Ear", fones.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Bluetooth", fones.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "LED", televisores.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "OLED", televisores.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "QLED", televisores.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Câmeras IP", monitoramento.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "DVR e NVR", monitoramento.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Kits Segurança", monitoramento.Id, dataCarga, usuarioCarga);
+
+        _ = EnsureCategoria(context, "Talheres", utensilios.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Espátulas", utensilios.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Conchas", utensilios.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Alumínio", panelas.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Inox", panelas.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Antiaderente", panelas.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Vassouras", equipamentosLimpeza.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Mops", equipamentosLimpeza.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Baldes", equipamentosLimpeza.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Varais", acessoriosLavanderia.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Pregadores", acessoriosLavanderia.Id, dataCarga, usuarioCarga);
+
+        _ = EnsureCategoria(context, "Capas", protecaoTelefonia.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Películas", protecaoTelefonia.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Carregadores", energiaTelefonia.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Power Banks", energiaTelefonia.Id, dataCarga, usuarioCarga);
+        _ = EnsureCategoria(context, "Fones Bluetooth", audioMovel.Id, dataCarga, usuarioCarga);
         context.SaveChanges();
 
         foreach (var cat in context.CategoriasProduto.ToList())
@@ -390,53 +490,15 @@ public class DbInitializer
     private static long? IdCategoriaPorSlug(Dictionary<string, long> mapa, string slug) =>
         mapa.TryGetValue(slug, out var id) ? id : null;
 
+    /// <summary>
+    /// Carga incremental de produtos fictícios (um registro por GTIN, se ainda não existir).
+    /// Se as tabelas de produto não existirem (erro 208), registra aviso: aplicar migrações EF (<c>prdProduto</c>).
+    /// </summary>
     private static void AddProdutosDemonstracao(AppDbContext context, string usuarioCarga, ILogger logger, Dictionary<string, long> mapaCategoria)
     {
         try
         {
             CorrigirNomesProdutosComPrefixoLegadoSeed(context, logger);
-
-            AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "7893500030518", () =>
-                ProdutoEntity.Registrar(
-                    nome: "Arroz parboilizado Tio João 1 kg",
-                    descricao: "Arroz longo fino tipo 1, embalagem plástica. Dados ilustrativos para ambiente de demonstração.",
-                    marca: "Tio João",
-                    modelo: "Tipo 1",
-                    gtin: "7893500030518",
-                    unidadeComercializacao: "UN",
-                    unidadeMedidaFisica: "KG",
-                    tipoEmbalagem: "PCT",
-                    dimensaoProduto: DimensaoProduto.Criar(0.04m, 0.15m, 0.22m, 1.0m, "CM", "KG"),
-                    dimensaoEmbalagem: DimensaoEmbalagem.Criar(0.045m, 0.16m, 0.23m, 1.05m, "CM", "KG"),
-                    origemProduto: OrigemProduto.Criar("1", null),
-                    dadosFiscais: DadosFiscais.Criar("10063021", "1705500", "0"),
-                    atributosIniciais: new[]
-                    {
-                        AtributoProduto.Criar("Armazenamento", "Local seco e arejado"),
-                        AtributoProduto.Criar("Validade típica", "12 meses (referência fictícia)")
-                    },
-                    skusIniciais: new[] { ("ARZ-TJ-1KG-UN", true), ("ARZ-TJ-1KG-CX12", true) },
-                    categoriaProdutoId: IdCategoriaPorSlug(mapaCategoria, "parboilizado"),
-                    usuarioAuditoria: usuarioCarga));
-
-            AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "7896048320065", () =>
-                ProdutoEntity.Registrar(
-                    nome: "Azeite extra virgem Andorinha 500 ml",
-                    descricao: "Azeite de oliva extra virgem, vidro. Demonstração — não é oferta comercial.",
-                    marca: "Andorinha",
-                    modelo: "Extra virgem",
-                    gtin: "7896048320065",
-                    unidadeComercializacao: "UN",
-                    unidadeMedidaFisica: "ML",
-                    tipoEmbalagem: "FR",
-                    dimensaoProduto: null,
-                    dimensaoEmbalagem: DimensaoEmbalagem.Criar(0.22m, 0.07m, 0.07m, 0.85m, "CM", "KG"),
-                    origemProduto: OrigemProduto.Criar("1", null),
-                    dadosFiscais: DadosFiscais.Criar("15091000", null, "0"),
-                    atributosIniciais: new[] { AtributoProduto.Criar("Volume", "500 ml") },
-                    skusIniciais: new[] { ("AZE-AND-500ML", true) },
-                    categoriaProdutoId: IdCategoriaPorSlug(mapaCategoria, "extra-virgem"),
-                    usuarioAuditoria: usuarioCarga));
 
             AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "7891234567890", () =>
                 ProdutoEntity.Registrar(
@@ -454,45 +516,163 @@ public class DbInitializer
                     dadosFiscais: DadosFiscais.Criar("84713012", "2108700", "1"),
                     atributosIniciais: new[] { AtributoProduto.Criar("CPU", "Mock i5"), AtributoProduto.Criar("RAM", "8 GB") },
                     skusIniciais: new[] { ("NB-DEMO-14-I5", true), ("NB-DEMO-14-I5-REF", false) },
-                    categoriaProdutoId: IdCategoriaPorSlug(mapaCategoria, "ultrafinos"),
+                    categoriaProdutoId: IdCategoriaPorSlug(mapaCategoria, "notebooks"),
                     usuarioAuditoria: usuarioCarga));
 
-            AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "7891000100103", () =>
+            AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "7891000300025", () =>
                 ProdutoEntity.Registrar(
-                    nome: "Detergente líquido limpeza total 500 ml",
-                    descricao: "Agente de limpeza — caixa com múltiplas unidades (SKU principal por frasco).",
-                    marca: "LimpaBem",
-                    modelo: "Neutro",
-                    gtin: "7891000100103",
-                    unidadeComercializacao: "CX",
-                    unidadeMedidaFisica: "L",
+                    nome: "Cadeira flexora — estação Leg Press",
+                    descricao: "Estação guiada para extensão de pernas / leg press. Dados ilustrativos (docs/POPOSTA_PRODUTOS.md).",
+                    marca: "DeepBlues Fitness",
+                    modelo: "dbfit-mextensora-001",
+                    gtin: "7891000300025",
+                    unidadeComercializacao: "UN",
+                    unidadeMedidaFisica: "UN",
+                    tipoEmbalagem: "CX",
+                    dimensaoProduto: DimensaoProduto.Criar(1.45m, 0.95m, 1.55m, 185m, "CM", "KG"),
+                    dimensaoEmbalagem: DimensaoEmbalagem.Criar(1.60m, 1.00m, 0.55m, 195m, "CM", "KG"),
+                    origemProduto: OrigemProduto.Criar("1", null),
+                    dadosFiscais: DadosFiscais.Criar("95069910", "1704400", "0"),
+                    atributosIniciais: new[]
+                    {
+                        AtributoProduto.Criar("Carga máx. indicada", "300 kg (pilha)"),
+                        AtributoProduto.Criar("Uso", "Musculação — membros inferiores")
+                    },
+                    skusIniciais: new[] { ("dbfit-mextensora-001", true) },
+                    categoriaProdutoId: IdCategoriaPorSlug(mapaCategoria, "leg-press"),
+                    usuarioAuditoria: usuarioCarga));
+
+            AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "7892000100001", () =>
+                ProdutoEntity.Registrar(
+                    nome: "Smart TV LED 43\" 4K fictícia",
+                    descricao: "Televisor LED para testes de árvore de categorias (Eletrônicos › Vídeo › Televisores › LED).",
+                    marca: "VisionDemo",
+                    modelo: "LED43-4K",
+                    gtin: "7892000100001",
+                    unidadeComercializacao: "UN",
+                    unidadeMedidaFisica: "UN",
+                    tipoEmbalagem: "CX",
+                    dimensaoProduto: DimensaoProduto.Criar(0.08m, 0.56m, 0.96m, 9.5m, "CM", "KG"),
+                    dimensaoEmbalagem: DimensaoEmbalagem.Criar(0.12m, 0.62m, 1.05m, 11.0m, "CM", "KG"),
+                    origemProduto: OrigemProduto.Criar("1", null),
+                    dadosFiscais: DadosFiscais.Criar("85287211", null, "0"),
+                    atributosIniciais: new[] { AtributoProduto.Criar("Resolução", "3840×2160 (referência demo)") },
+                    skusIniciais: new[] { ("TV-DEMO-LED43", true) },
+                    categoriaProdutoId: IdCategoriaPorSlug(mapaCategoria, "led"),
+                    usuarioAuditoria: usuarioCarga));
+
+            AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "7892000100002", () =>
+                ProdutoEntity.Registrar(
+                    nome: "Soundbar 2.1 canais fictícia",
+                    descricao: "Barra de som para demonstração de categoria Áudio › Equipamentos de Áudio › Soundbars.",
+                    marca: "SonicBar",
+                    modelo: "SB-210",
+                    gtin: "7892000100002",
+                    unidadeComercializacao: "UN",
+                    unidadeMedidaFisica: "UN",
                     tipoEmbalagem: "CX",
                     dimensaoProduto: null,
-                    dimensaoEmbalagem: DimensaoEmbalagem.Criar(0.25m, 0.32m, 0.40m, 6.5m, "CM", "KG"),
+                    dimensaoEmbalagem: DimensaoEmbalagem.Criar(0.12m, 0.95m, 0.14m, 3.2m, "CM", "KG"),
                     origemProduto: OrigemProduto.Criar("1", null),
-                    dadosFiscais: DadosFiscais.Criar("34022000", "2803800", "0"),
-                    atributosIniciais: new[] { AtributoProduto.Criar("Fragrância", "Limão"), AtributoProduto.Criar("pH", "~7") },
-                    skusIniciais: new[] { ("DET-LIM-500-CX24", true) },
-                    categoriaProdutoId: IdCategoriaPorSlug(mapaCategoria, "multiuso"),
+                    dadosFiscais: DadosFiscais.Criar("85182200", null, "0"),
+                    atributosIniciais: new[] { AtributoProduto.Criar("Potência", "120 W RMS (fictício)") },
+                    skusIniciais: new[] { ("AUD-SB210-UN", true) },
+                    categoriaProdutoId: IdCategoriaPorSlug(mapaCategoria, "soundbars"),
                     usuarioAuditoria: usuarioCarga));
 
-            AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "7896004001234", () =>
+            AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "7892000100003", () =>
                 ProdutoEntity.Registrar(
-                    nome: "Café torrado em grãos especial 250 g",
-                    descricao: "Café arábica torrado, acondicionado a vácuo. Peso líquido 250 g (unidade de venda: pacote).",
-                    marca: "Café do Cerrado",
-                    modelo: "Grãos inteiros",
-                    gtin: "7896004001234",
+                    nome: "Capa TPU transparente smartphone 6,5\"",
+                    descricao: "Proteção — Celulares › Acessórios › Proteção › Capas.",
+                    marca: "ShieldCase",
+                    modelo: "TPU-65",
+                    gtin: "7892000100003",
                     unidadeComercializacao: "UN",
-                    unidadeMedidaFisica: "KG",
+                    unidadeMedidaFisica: "UN",
                     tipoEmbalagem: "PCT",
-                    dimensaoProduto: DimensaoProduto.Criar(30m, 12m, 18m, 25m, "CM", "KG"),
-                    dimensaoEmbalagem: DimensaoEmbalagem.Criar(35m, 13m, 19m, 0.26m, "CM", "KG"),
+                    dimensaoProduto: null,
+                    dimensaoEmbalagem: DimensaoEmbalagem.Criar(0.02m, 0.10m, 0.18m, 0.04m, "CM", "KG"),
                     origemProduto: OrigemProduto.Criar("1", null),
-                    dadosFiscais: DadosFiscais.Criar("09011100", null, "0"),
-                    atributosIniciais: new[] { AtributoProduto.Criar("Torra", "Média"), AtributoProduto.Criar("Safra", "Referência demo") },
-                    skusIniciais: new[] { ("CAF-CER-250G", true), ("CAF-CER-250G-ORG", true) },
-                    categoriaProdutoId: IdCategoriaPorSlug(mapaCategoria, "em-graos"),
+                    dadosFiscais: DadosFiscais.Criar("39269090", null, "0"),
+                    atributosIniciais: new[] { AtributoProduto.Criar("Compatibilidade", "Smartphones até 6,5\"") },
+                    skusIniciais: new[] { ("CEL-CAPA-TPU65", true) },
+                    categoriaProdutoId: IdCategoriaPorSlug(mapaCategoria, "capas"),
+                    usuarioAuditoria: usuarioCarga));
+
+            AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "7892000100004", () =>
+                ProdutoEntity.Registrar(
+                    nome: "Frigideira antiaderente 24 cm",
+                    descricao: "Panelas › Antiaderente — utilidades domésticas.",
+                    marca: "CozinhaPrática",
+                    modelo: "FRG-24",
+                    gtin: "7892000100004",
+                    unidadeComercializacao: "UN",
+                    unidadeMedidaFisica: "UN",
+                    tipoEmbalagem: "CX",
+                    dimensaoProduto: null,
+                    dimensaoEmbalagem: DimensaoEmbalagem.Criar(0.08m, 0.28m, 0.45m, 0.95m, "CM", "KG"),
+                    origemProduto: OrigemProduto.Criar("1", null),
+                    dadosFiscais: DadosFiscais.Criar("76151020", null, "0"),
+                    atributosIniciais: new[] { AtributoProduto.Criar("Revestimento", "Antiaderente cerâmico (demo)") },
+                    skusIniciais: new[] { ("UDM-FRG24-AD", true) },
+                    categoriaProdutoId: IdCategoriaPorSlug(mapaCategoria, "antiaderente"),
+                    usuarioAuditoria: usuarioCarga));
+
+            AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "7892000100005", () =>
+                ProdutoEntity.Registrar(
+                    nome: "Roteador Wi-Fi 6 AX1800 fictício",
+                    descricao: "Informática › Redes › Roteadores.",
+                    marca: "NetWave",
+                    modelo: "AX1800-Demo",
+                    gtin: "7892000100005",
+                    unidadeComercializacao: "UN",
+                    unidadeMedidaFisica: "UN",
+                    tipoEmbalagem: "CX",
+                    dimensaoProduto: null,
+                    dimensaoEmbalagem: DimensaoEmbalagem.Criar(0.08m, 0.22m, 0.32m, 0.55m, "CM", "KG"),
+                    origemProduto: OrigemProduto.Criar("1", null),
+                    dadosFiscais: DadosFiscais.Criar("85176259", null, "0"),
+                    atributosIniciais: new[] { AtributoProduto.Criar("Padrão", "Wi-Fi 6 (802.11ax) — fictício") },
+                    skusIniciais: new[] { ("NET-AX1800-UN", true) },
+                    categoriaProdutoId: IdCategoriaPorSlug(mapaCategoria, "roteadores"),
+                    usuarioAuditoria: usuarioCarga));
+
+            AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "7892000100006", () =>
+                ProdutoEntity.Registrar(
+                    nome: "Mouse óptico USB — periférico demo",
+                    descricao: "Informática › Periféricos › Mouses.",
+                    marca: "ClickSoft",
+                    modelo: "MO-U100",
+                    gtin: "7892000100006",
+                    unidadeComercializacao: "UN",
+                    unidadeMedidaFisica: "UN",
+                    tipoEmbalagem: "BL",
+                    dimensaoProduto: null,
+                    dimensaoEmbalagem: DimensaoEmbalagem.Criar(0.04m, 0.07m, 0.12m, 0.09m, "CM", "KG"),
+                    origemProduto: OrigemProduto.Criar("1", null),
+                    dadosFiscais: DadosFiscais.Criar("84716053", null, "0"),
+                    atributosIniciais: new[] { AtributoProduto.Criar("DPI", "1600 (referência demo)") },
+                    skusIniciais: new[] { ("PER-MOU-U100", true) },
+                    categoriaProdutoId: IdCategoriaPorSlug(mapaCategoria, "mouses"),
+                    usuarioAuditoria: usuarioCarga));
+
+            AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "7892000100007", () =>
+                ProdutoEntity.Registrar(
+                    nome: "Memória RAM DDR4 8 GB 3200 MHz fictícia",
+                    descricao: "Componentes › Memória RAM.",
+                    marca: "FastMem",
+                    modelo: "DDR4-8G3200",
+                    gtin: "7892000100007",
+                    unidadeComercializacao: "UN",
+                    unidadeMedidaFisica: "UN",
+                    tipoEmbalagem: "BL",
+                    dimensaoProduto: null,
+                    dimensaoEmbalagem: DimensaoEmbalagem.Criar(0.03m, 0.14m, 0.04m, 0.02m, "CM", "KG"),
+                    origemProduto: OrigemProduto.Criar("2", "China"),
+                    dadosFiscais: DadosFiscais.Criar("85423229", null, "1"),
+                    atributosIniciais: new[] { AtributoProduto.Criar("Formato", "DIMM desktop (demo)") },
+                    skusIniciais: new[] { ("CMP-RAM-D48G", true) },
+                    categoriaProdutoId: IdCategoriaPorSlug(mapaCategoria, "memoria-ram"),
                     usuarioAuditoria: usuarioCarga));
 
             AddProdutosDemonstracaoFitnessImportadosChina(context, usuarioCarga, mapaCategoria);
@@ -569,43 +749,60 @@ public class DbInitializer
             p.AlterarCategoria(idCat, usuarioCarga);
         }
 
-        Vincular("7893500030518", "parboilizado");
-        Vincular("7896048320065", "extra-virgem");
-        Vincular("7891234567890", "ultrafinos");
-        Vincular("7891000100103", "multiuso");
-        Vincular("7896004001234", "em-graos");
+        Vincular("7891234567890", "notebooks");
+        Vincular("7891000300025", "leg-press");
+        Vincular("7892000100001", "led");
+        Vincular("7892000100002", "soundbars");
+        Vincular("7892000100003", "capas");
+        Vincular("7892000100004", "antiaderente");
+        Vincular("7892000100005", "roteadores");
+        Vincular("7892000100006", "mouses");
+        Vincular("7892000100007", "memoria-ram");
 
-        foreach (var gtin in GtinsProdutosFitnessImportadosChina)
-            Vincular(gtin, "fitness");
+        Vincular("6928365001001", "halteres");
+        Vincular("6928365001002", "halteres");
+        Vincular("6928365001003", "supino");
+        Vincular("6928365001004", "faixas-elasticas");
+        Vincular("6928365001005", "acessorios-para-treino-funcional");
+        Vincular("6928365001006", "estacoes-de-musculacao");
+        Vincular("6928365001007", "kettlebell");
+        Vincular("6928365001008", "cordas");
+        Vincular("6928365001009", "estacoes-de-musculacao");
 
-        for (var i = 0; i < 20; i++)
-            Vincular($"7899010{(i + 1):D6}", "graos-e-cereais");
+        ReadOnlySpan<(string Gtin, string Slug)> extrasPaginacao =
+        [
+            ("7899010000001", "colchonetes"),
+            ("7899010000002", "kettlebell"),
+            ("7899010000003", "esteiras"),
+            ("7899010000004", "led"),
+            ("7899010000005", "mouses"),
+            ("7899010000006", "teclados"),
+            ("7899010000007", "ssd-e-hd"),
+            ("7899010000008", "memoria-ram"),
+            ("7899010000009", "roteadores"),
+            ("7899010000010", "capas"),
+            ("7899010000011", "peliculas"),
+            ("7899010000012", "carregadores"),
+            ("7899010000013", "power-banks"),
+            ("7899010000014", "talheres"),
+            ("7899010000015", "antiaderente"),
+            ("7899010000016", "caixas-organizadoras"),
+            ("7899010000017", "vassouras"),
+            ("7899010000018", "mops"),
+            ("7899010000019", "varais"),
+            ("7899010000020", "halteres"),
+        ];
+
+        foreach (var (gtin, slug) in extrasPaginacao)
+            Vincular(gtin, slug);
     }
 
-    /// <summary>GTINs 692… (prefixo comercial China) — seed importados para filtro de origem.</summary>
-    private static readonly string[] GtinsProdutosFitnessImportadosChina =
-    [
-        "6928365001001",
-        "6928365001002",
-        "6928365001003",
-        "6928365001004",
-        "6928365001005",
-        "6928365001006",
-        "6928365001007",
-        "6928365001008",
-        "6928365001009",
-    ];
-
-    /// <summary>Equipamentos de musculação e aeróbico — origem China (demonstração).</summary>
+    /// <summary>GTINs 692… (China) — musculação / funcional / yoga; categorias folha conforme árvore nova.</summary>
     private static void AddProdutosDemonstracaoFitnessImportadosChina(
         AppDbContext context,
         string usuarioCarga,
         Dictionary<string, long> mapaCategoria)
     {
-        var idFitness = IdCategoriaPorSlug(mapaCategoria, "fitness");
-        if (!idFitness.HasValue)
-            return;
-
         AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "6928365001001", () =>
             ProdutoEntity.Registrar(
                 nome: "Par de halteres hexagonais borracha 10 kg",
@@ -626,7 +823,7 @@ public class DbInitializer
                     AtributoProduto.Criar("Uso", "Musculação / crossfit"),
                 },
                 skusIniciais: new[] { ("FIT-CN-HX10-PAR", true) },
-                categoriaProdutoId: idFitness,
+                categoriaProdutoId: IdCategoriaPorSlug(mapaCategoria, "halteres"),
                 usuarioAuditoria: usuarioCarga));
 
         AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "6928365001002", () =>
@@ -645,7 +842,7 @@ public class DbInitializer
                 dadosFiscais: DadosFiscais.Criar("95069100", null, "1"),
                 atributosIniciais: new[] { AtributoProduto.Criar("Peso máx. recomendado", "20 kg total") },
                 skusIniciais: new[] { ("FIT-CN-QL20-PAR", true) },
-                categoriaProdutoId: idFitness,
+                categoriaProdutoId: IdCategoriaPorSlug(mapaCategoria, "halteres"),
                 usuarioAuditoria: usuarioCarga));
 
         AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "6928365001003", () =>
@@ -668,7 +865,7 @@ public class DbInitializer
                     AtributoProduto.Criar("Função", "Peito, costas, ombros"),
                 },
                 skusIniciais: new[] { ("FIT-CN-BM500-UN", true) },
-                categoriaProdutoId: idFitness,
+                categoriaProdutoId: IdCategoriaPorSlug(mapaCategoria, "supino"),
                 usuarioAuditoria: usuarioCarga));
 
         AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "6928365001004", () =>
@@ -691,7 +888,7 @@ public class DbInitializer
                     AtributoProduto.Criar("Treino", "Pilates, funcional, reabilitação"),
                 },
                 skusIniciais: new[] { ("FIT-CN-FB11-KIT", true) },
-                categoriaProdutoId: idFitness,
+                categoriaProdutoId: IdCategoriaPorSlug(mapaCategoria, "faixas-elasticas"),
                 usuarioAuditoria: usuarioCarga));
 
         AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "6928365001005", () =>
@@ -710,7 +907,7 @@ public class DbInitializer
                 dadosFiscais: DadosFiscais.Criar("95069100", null, "1"),
                 atributosIniciais: new[] { AtributoProduto.Criar("Indicado para", "Abdômen, estabilização") },
                 skusIniciais: new[] { ("FIT-CN-CW2R-UN", true) },
-                categoriaProdutoId: idFitness,
+                categoriaProdutoId: IdCategoriaPorSlug(mapaCategoria, "acessorios-para-treino-funcional"),
                 usuarioAuditoria: usuarioCarga));
 
         AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "6928365001006", () =>
@@ -729,7 +926,7 @@ public class DbInitializer
                 dadosFiscais: DadosFiscais.Criar("95069910", null, "1"),
                 atributosIniciais: new[] { AtributoProduto.Criar("Montagem", "Necessária — manual incluso (fictício)") },
                 skusIniciais: new[] { ("FIT-CN-ALCR-UN", true) },
-                categoriaProdutoId: idFitness,
+                categoriaProdutoId: IdCategoriaPorSlug(mapaCategoria, "estacoes-de-musculacao"),
                 usuarioAuditoria: usuarioCarga));
 
         AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "6928365001007", () =>
@@ -748,7 +945,7 @@ public class DbInitializer
                 dadosFiscais: DadosFiscais.Criar("95069100", null, "1"),
                 atributosIniciais: new[] { AtributoProduto.Criar("Acabamento", "Pintura eletrostática preta") },
                 skusIniciais: new[] { ("FIT-CN-IK12-UN", true) },
-                categoriaProdutoId: idFitness,
+                categoriaProdutoId: IdCategoriaPorSlug(mapaCategoria, "kettlebell"),
                 usuarioAuditoria: usuarioCarga));
 
         AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "6928365001008", () =>
@@ -767,7 +964,7 @@ public class DbInitializer
                 dadosFiscais: DadosFiscais.Criar("95069100", null, "1"),
                 atributosIniciais: new[] { AtributoProduto.Criar("Comprimento", "Ajustável até 3 m") },
                 skusIniciais: new[] { ("FIT-CN-SR360-UN", true) },
-                categoriaProdutoId: idFitness,
+                categoriaProdutoId: IdCategoriaPorSlug(mapaCategoria, "cordas"),
                 usuarioAuditoria: usuarioCarga));
 
         AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, "6928365001009", () =>
@@ -786,11 +983,11 @@ public class DbInitializer
                 dadosFiscais: DadosFiscais.Criar("95069910", null, "1"),
                 atributosIniciais: new[] { AtributoProduto.Criar("Carga máx. indicada", "120 kg") },
                 skusIniciais: new[] { ("FIT-CN-FGMINI-UN", true) },
-                categoriaProdutoId: idFitness,
+                categoriaProdutoId: IdCategoriaPorSlug(mapaCategoria, "estacoes-de-musculacao"),
                 usuarioAuditoria: usuarioCarga));
     }
 
-    /// <summary>Vinte itens fictícios adicionais (GTINs 7899010000001–20) para exercitar paginação do grid.</summary>
+    /// <summary>Vinte itens fictícios (GTINs 7899010000001–20) espalhados na nova árvore — paginação e filtros por categoria.</summary>
     private static void AddProdutosDemonstracaoExtrasPaginacao(
         AppDbContext context,
         string usuarioCarga,
@@ -798,42 +995,50 @@ public class DbInitializer
     {
         ReadOnlySpan<string> nomes =
         [
-            "Leite integral UHT 1 L",
-            "Açúcar cristal 1 kg",
-            "Farinha de trigo tipo 1 1 kg",
-            "Óleo de soja 900 ml",
-            "Macarrão espaguete 500 g",
-            "Molho de tomate tradicional 340 g",
-            "Feijão preto tipo 1 1 kg",
-            "Sal refinado iodado 1 kg",
-            "Vinagre de álcool 750 ml",
-            "Achocolatado em pó 400 g",
-            "Biscoito cream cracker 400 g",
-            "Sardinha em lata 125 g",
-            "Atum em conserva 170 g",
-            "Suco de laranja integral 1 L",
-            "Iogurte natural 170 g",
-            "Queijo minas frescal porção",
-            "Manteiga com sal 200 g",
-            "Papel higiênico folha dupla 30 m",
-            "Sabonete líquido 250 ml",
-            "Shampoo hidratante 350 ml"
+            "Colchonete yoga PVC 10 mm",
+            "Kettlebell emborrachado 8 kg",
+            "Esteira elétrica compacta 1,25 m",
+            "Smart TV OLED 55\" fictícia",
+            "Mouse sem fio ergonômico",
+            "Teclado mecânico ABNT2",
+            "SSD NVMe 1 TB fictício",
+            "Memória RAM DDR5 16 GB",
+            "Switch gerenciável 8 portas",
+            "Capa flip couro sintético universal",
+            "Película vidro temperado 6,1\"",
+            "Carregador USB-C 30 W GaN",
+            "Power bank 20.000 mAh",
+            "Conjunto talheres inox 24 peças",
+            "Panela pressão antiaderente 4,5 L",
+            "Caixa organizadora empilhável 15 L",
+            "Vassoura pelo sintético cabo longo",
+            "Mop spray com reservatório",
+            "Varal de chão com abas",
+            "Anilha olímpica pintada 20 kg"
         ];
 
         ReadOnlySpan<string> marcas =
         [
-            "Lácteos Demo", "DoceVida", "Moinho Norte", "Soja Mais", "Massas Itália",
-            "Tomate Feliz", "Grãos do Sertão", "Sal do Mar", "Vinagreira", "Chocolate Kids",
-            "Snack Bom", "Peixe Azul", "ConservaFit", "Citros", "Iogurte Vivo",
-            "Queijos Mineiros", "Manteiga Ouro", "HigieneSoft", "Limpeza Total", "Cabelos Lindos"
+            "ZenMat", "KettleSoft", "RunCompact", "OLEDVision", "ErgoClick",
+            "TypeMech", "FlashStore", "FastMem", "NetPort", "CoverLux",
+            "GlassShield", "TurboCharge", "AmpBank", "Talheres Sul", "PressCook",
+            "Organiza+", "LimpFácil", "MopSpray", "VaralMax", "OlympPlate"
         ];
 
         ReadOnlySpan<string> ncms =
         [
-            "04012010", "17019900", "11010010", "15079011", "19021100",
-            "20021000", "07133319", "25010011", "22090000", "18069000",
-            "19053100", "16041311", "16041410", "20091200", "04039000",
-            "04061010", "04051000", "48181000", "34013000", "33051000"
+            "95069910", "95069100", "95069100", "85287212", "84716053",
+            "84716011", "85235190", "85423229", "85176241", "39269090",
+            "39269090", "85044010", "85044090", "82159900", "76151020",
+            "39249000", "96039000", "96039000", "73239900", "95069910"
+        ];
+
+        ReadOnlySpan<string> slugsCategoria =
+        [
+            "colchonetes", "kettlebell", "esteiras", "oled", "mouses",
+            "teclados", "ssd-e-hd", "memoria-ram", "switches", "capas",
+            "peliculas", "carregadores", "power-banks", "talheres", "antiaderente",
+            "caixas-organizadoras", "vassouras", "mops", "varais", "anilhas"
         ];
 
         for (var i = 0; i < nomes.Length; i++)
@@ -843,11 +1048,12 @@ public class DbInitializer
             var marca = marcas[i];
             var ncm = ncms[i];
             var sku = $"SEED-PAG-{(i + 1):D2}";
+            var slug = slugsCategoria[i];
 
             AddProdutoDemonstracaoIfNotExistsPorGtin(context, usuarioCarga, gtin, () =>
                 ProdutoEntity.Registrar(
                     nome: nome,
-                    descricao: "Item fictício para teste de paginação no grid administrativo.",
+                    descricao: "Item fictício para teste de paginação e facetas de categoria no grid administrativo.",
                     marca: marca,
                     modelo: "Demo",
                     gtin: gtin,
@@ -858,9 +1064,9 @@ public class DbInitializer
                     dimensaoEmbalagem: DimensaoEmbalagem.Criar(0.08m, 0.12m, 0.16m, 0.45m, "CM", "KG"),
                     origemProduto: OrigemProduto.Criar("1", null),
                     dadosFiscais: DadosFiscais.Criar(ncm, null, "0"),
-                    atributosIniciais: new[] { AtributoProduto.Criar("Demo", "Paginação grid") },
+                    atributosIniciais: new[] { AtributoProduto.Criar("Demo", "Paginação / categorias") },
                     skusIniciais: new[] { (sku, true) },
-                    categoriaProdutoId: IdCategoriaPorSlug(mapaCategoria, "graos-e-cereais"),
+                    categoriaProdutoId: IdCategoriaPorSlug(mapaCategoria, slug),
                     usuarioAuditoria: usuarioCarga));
         }
     }

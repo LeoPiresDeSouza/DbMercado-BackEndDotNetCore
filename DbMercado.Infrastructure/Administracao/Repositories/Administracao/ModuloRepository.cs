@@ -4,6 +4,7 @@ using DbMercado.Infrastructure.Shared.Data;
 using DbMercado.Infrastructure.Shared.Interfaces;
 using DeepBlues.Infrastructure.Providers;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace DbMercado.Infrastructure.Administracao.Repositories.Administracao;
 
@@ -52,7 +53,12 @@ public class ModuloRepository: BaseRepository<ModuloEntity>, IModuloRepository
     /// <returns>List<ModuloEntity></returns>
     public async Task<List<ModuloEntity>> ModulosUsuarioAsync(string usuario, List<long> permissoesIds)
     {
-        var cacheKey = $"ModulosUsuarioAsync:{usuario}";
+        // A lista de módulos depende das permissões; chave só por usuário retornava lista errada/stale
+        // (ex.: primeiro hit sem permissão de produtos cacheava vazio e o menu lateral sumia para sempre).
+        var permFingerprint = permissoesIds.Count == 0
+            ? "0"
+            : string.Join('-', permissoesIds.OrderBy(id => id));
+        var cacheKey = $"ModulosUsuarioAsync:{usuario}:{permFingerprint}";
 
         var modulo = await _cache.GetOrCreateAsync(
                            CachePolicy.MediumTerm,
