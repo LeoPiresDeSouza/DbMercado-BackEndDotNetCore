@@ -400,6 +400,8 @@ LocalStorageService (Infrastructure/Produto/Storage/)
 }
 ```
 
+**Chat (criptografia em repouso):** a API exige `CHAT_ENCRYPTION_KEY` na configuração ou variável de ambiente — string Base64 que decodifica exatamente 32 bytes (AES-256). Use User Secrets do projeto `DbMercado.Api` ou `dotnet user secrets set "CHAT_ENCRYPTION_KEY" "<base64>"`. Sem isso a aplicação falha na inicialização. Ver `docs/CHAT_MODULE_ETAPA_6.md`.
+
 ---
 
 ## 11. Comandos

@@ -113,9 +113,8 @@ public sealed class DatabaseLogger : ILogger
 
         try
         {
-            //using var scope = _scopeFactory.CreateScope();
-            //var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            AppDbContext context = new();
+            using var scope = _scopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             context.AppLogEntries.Add(entry);
             context.SaveChanges();
         }

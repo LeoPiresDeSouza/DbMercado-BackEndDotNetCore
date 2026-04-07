@@ -1,10 +1,14 @@
+using DbMercado.Application.Administracao;
 using DbMercado.Domain.Administracao.Entities;
+using DbMercado.Domain.Chat;
+using DbMercado.Domain.Chat.Entities;
 using DbMercado.Domain.Produto.Entities;
 using DbMercado.Domain.Produto.ValueObjects;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
 using System.Security.Claims;
@@ -33,6 +37,7 @@ public class DbInitializer
             AddFuncionalidades(context, dataCarga, usuarioCarga);
             AddPermissoes(context, dataCarga, usuarioCarga);
             AddApplicationUser(context, provider);
+            AddChatDevSeed(context, provider, dataCarga, usuarioCarga, _logger);
             var mapaCategoria = AddCategorias(context, dataCarga, usuarioCarga);
             AddProdutosDemonstracao(context, usuarioCarga, _logger, mapaCategoria);
 
@@ -1155,6 +1160,7 @@ public class DbInitializer
         AddAllPermissionsToUser(context, usermanager, user);
 
         AssociarPermissoesCadastroProdutosAoUsuario(context, usermanager, email);
+        AssociarPermissoesChatMultilingueAoUsuario(context, usermanager, email);
     }
 
 
@@ -1225,6 +1231,202 @@ public class DbInitializer
             .ToList();
 
         usermanager.AddClaimsAsync(usuario, claims).Wait();
+    }
+
+    private static void AssociarPermissoesChatMultilingueAoUsuario(AppDbContext context,
+                                                                   UserManager<IdentityUser> usermanager,
+                                                                   string email)
+    {
+        var usuario = usermanager.FindByEmailAsync(email).Result;
+        if (usuario is null)
+            return;
+
+        const string claimPermissaoKey = "Permissao";
+
+        var funcionalidade = context.Funcionalidades
+            .FirstOrDefault(f => f.NomeNormalizado == ChatMultilinguePermissoesCatalogo.FuncionalidadeNomeNormalizado);
+        if (funcionalidade is null)
+            return;
+
+        var idsPermissao = context.Permissoes
+            .Where(p => p.FuncionalidadeId == funcionalidade.Id)
+            .Select(p => p.Id)
+            .ToList();
+
+        var claimsExistentes = usermanager.GetClaimsAsync(usuario).Result
+            .Where(c => c.Type == claimPermissaoKey)
+            .Select(c => c.Value)
+            .ToList();
+
+        var novas = idsPermissao
+            .Where(id => !claimsExistentes.Contains(id.ToString()))
+            .ToList();
+
+        if (!novas.Any())
+            return;
+
+        var claims = novas
+            .Select(id => new Claim(claimPermissaoKey, id.ToString()))
+            .ToList();
+
+        usermanager.AddClaimsAsync(usuario, claims).Wait();
+    }
+
+    /// <summary>
+    /// Ambiente Development: três usuários Identity (pt-BR, en, zh-CN) e uma sala demo.
+    /// Senha alinhada ao usuário principal de dev (<c>Leo@123</c>). Idempotente por nome da sala.
+    /// </summary>
+    private static void AddChatDevSeed(AppDbContext context,
+                                       IServiceProvider provider,
+                                       DateTime dataCarga,
+                                       string usuarioCarga,
+                                       ILogger logger)
+    {
+        var env = provider.GetService<IHostEnvironment>();
+        if (env is null || !env.IsDevelopment())
+            return;
+
+        const string nomeSalaDemo = "Sala demo multilíngue (dev)";
+        if (context.ChatRooms.Any(r => r.Name == nomeSalaDemo))
+            return;
+
+        var usermanager = provider.GetRequiredService<UserManager<IdentityUser>>();
+        const string senhaDev = "Leo@123";
+
+        var owner = usermanager.FindByEmailAsync("lps064@gmail.com").Result;
+        if (owner is null)
+        {
+            logger.LogWarning("Chat dev seed: lps064@gmail.com não encontrado; ignorado.");
+            return;
+        }
+
+        var enUser = EnsureDevChatIdentityUser(usermanager, "chat.demo.en@dbmercado.dev", senhaDev, logger);
+        var zhUser = EnsureDevChatIdentityUser(usermanager, "chat.demo.zh@dbmercado.dev", senhaDev, logger);
+        if (enUser is null || zhUser is null)
+            return;
+
+        GrantChatMultilingueAcessarClaimIfNeeded(context, usermanager, enUser);
+        GrantChatMultilingueAcessarClaimIfNeeded(context, usermanager, zhUser);
+
+        var instanteUtc = DateTime.UtcNow;
+        var roomId = Guid.NewGuid();
+
+        var room = new ChatRoomEntity
+        {
+            Id = roomId,
+            OwnerId = owner.Id,
+            Name = nomeSalaDemo,
+            Description = "Sala de demonstração do chat multilíngue (seed apenas em Development).",
+            Status = ChatRoomStatus.Active,
+            DataCriacao = instanteUtc,
+            DataUltimaAlteracao = instanteUtc,
+            UsuarioCriacao = usuarioCarga,
+            UsuarioUltimaAlteracao = usuarioCarga
+        };
+
+        context.ChatRooms.Add(room);
+
+        context.ChatMembers.AddRange(
+            new ChatMemberEntity
+            {
+                RoomId = roomId,
+                UserId = owner.Id,
+                LanguagePref = LanguageCode.PtBr,
+                Role = ChatMemberRole.Owner,
+                JoinedAt = instanteUtc,
+                DataCriacao = instanteUtc,
+                DataUltimaAlteracao = instanteUtc,
+                UsuarioCriacao = usuarioCarga,
+                UsuarioUltimaAlteracao = usuarioCarga
+            },
+            new ChatMemberEntity
+            {
+                RoomId = roomId,
+                UserId = enUser.Id,
+                LanguagePref = LanguageCode.En,
+                Role = ChatMemberRole.Member,
+                JoinedAt = instanteUtc,
+                DataCriacao = instanteUtc,
+                DataUltimaAlteracao = instanteUtc,
+                UsuarioCriacao = usuarioCarga,
+                UsuarioUltimaAlteracao = usuarioCarga
+            },
+            new ChatMemberEntity
+            {
+                RoomId = roomId,
+                UserId = zhUser.Id,
+                LanguagePref = LanguageCode.ZhCn,
+                Role = ChatMemberRole.Member,
+                JoinedAt = instanteUtc,
+                DataCriacao = instanteUtc,
+                DataUltimaAlteracao = instanteUtc,
+                UsuarioCriacao = usuarioCarga,
+                UsuarioUltimaAlteracao = usuarioCarga
+            });
+
+        context.SaveChanges();
+    }
+
+    private static IdentityUser? EnsureDevChatIdentityUser(UserManager<IdentityUser> usermanager,
+                                                           string email,
+                                                           string senha,
+                                                           ILogger logger)
+    {
+        var user = usermanager.FindByEmailAsync(email).Result;
+        if (user is not null)
+            return user;
+
+        var newUser = new IdentityUser
+        {
+            UserName = email,
+            Email = email,
+            EmailConfirmed = true
+        };
+
+        var result = usermanager.CreateAsync(newUser, senha).Result;
+        if (!result.Succeeded)
+        {
+            logger.LogWarning("Chat dev seed: falha ao criar {Email}: {Erros}",
+                email,
+                string.Join("; ", result.Errors.Select(e => e.Description)));
+            return null;
+        }
+
+        user = usermanager.FindByEmailAsync(email).Result;
+        if (user is null)
+            return null;
+
+        var code = usermanager.GenerateEmailConfirmationTokenAsync(user).Result;
+        usermanager.ConfirmEmailAsync(user, code).Wait();
+        return user;
+    }
+
+    private static void GrantChatMultilingueAcessarClaimIfNeeded(AppDbContext context,
+                                                                 UserManager<IdentityUser> usermanager,
+                                                                 IdentityUser user)
+    {
+        const string claimPermissaoKey = "Permissao";
+
+        var funcionalidade = context.Funcionalidades
+            .FirstOrDefault(f => f.NomeNormalizado == ChatMultilinguePermissoesCatalogo.FuncionalidadeNomeNormalizado);
+        if (funcionalidade is null)
+            return;
+
+        var permissaoId = context.Permissoes
+            .Where(p => p.FuncionalidadeId == funcionalidade.Id && p.Permissao == ChatMultilinguePermissoesCatalogo.Acessar)
+            .Select(p => p.Id)
+            .FirstOrDefault();
+
+        if (permissaoId == 0)
+            return;
+
+        var jaTem = usermanager.GetClaimsAsync(user).Result
+            .Any(c => c.Type == claimPermissaoKey && c.Value == permissaoId.ToString());
+
+        if (jaTem)
+            return;
+
+        usermanager.AddClaimsAsync(user, [new Claim(claimPermissaoKey, permissaoId.ToString())]).Wait();
     }
 
     #endregion
@@ -1317,6 +1519,15 @@ public class DbInitializer
             usuarioCarga);
 
         AddFuncionalidadeIfNotExists(context,
+            "administracao",
+            ChatMultilinguePermissoesCatalogo.FuncionalidadeNomeNormalizado,
+            "Chat multilíngue",
+            "Chat em tempo real com tradução para equipes B2B multilíngues.",
+            4,
+            dataCarga,
+            usuarioCarga);
+
+        AddFuncionalidadeIfNotExists(context,
             "produtos",
             "cadastroprodutos",
             "Cadastro de Produtos",
@@ -1384,6 +1595,12 @@ public class DbInitializer
         AddPermissaoIfNotExists(context, "controledelogs", "descarregarParaDisco", dataCarga, usuarioCarga);
 
         AddPermissaoIfNotExists(context, "execucoesdejobs", "acessar", dataCarga, usuarioCarga);
+
+        AddPermissaoIfNotExists(context,
+            ChatMultilinguePermissoesCatalogo.FuncionalidadeNomeNormalizado,
+            ChatMultilinguePermissoesCatalogo.Acessar,
+            dataCarga,
+            usuarioCarga);
 
         AddPermissaoIfNotExists(context, "cadastroprodutos", "criar", dataCarga, usuarioCarga);
         AddPermissaoIfNotExists(context, "cadastroprodutos", "ler", dataCarga, usuarioCarga);

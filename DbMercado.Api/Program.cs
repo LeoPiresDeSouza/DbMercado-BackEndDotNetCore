@@ -1,9 +1,15 @@
 using DbMercado.Api.Extensions;
+using DbMercado.Api.Hubs;
 using DbMercado.Api.Middlewares;
+using DbMercado.Api.Workers;
+using DbMercado.Api.RealTime;
 using DbMercado.Application.Administracao.Interfaces;
 using DbMercado.Application.Administracao.Services;
 using DbMercado.Application.Importacao.Interfaces;
 using DbMercado.Application.Importacao.Services;
+using DbMercado.Application.Chat.Dtos;
+using DbMercado.Application.Chat.Interfaces;
+using DbMercado.Application.Chat.Services;
 using DbMercado.Application.Produto.Interfaces;
 using DbMercado.Application.Produto.Services;
 using DbMercado.Infrastructure.Produto.Services;
@@ -11,11 +17,16 @@ using DbMercado.Domain.Shared;
 using DbMercado.Domain.Shared.Interfaces.Repositories;
 using DbMercado.CrossCutting.Settings;
 using DbMercado.Domain.Administracao.Interfaces.Repositories;
+using DbMercado.Domain.Chat.Interfaces.UnitsOfWork;
 using DbMercado.Domain.Administracao.Interfaces.Services.Autenticacao;
 using DbMercado.Domain.Administracao.Interfaces.UnitsOfWork;
 using DbMercado.Domain.Importacao.Interfaces.UnitsOfWork;
 using DbMercado.Domain.Produto.Interfaces.UnitsOfWork;
 using DbMercado.Infrastructure.Administracao.Repositories;
+using DbMercado.Infrastructure.Chat.Caching;
+using DbMercado.Infrastructure.Chat.RateLimiting;
+using DbMercado.Infrastructure.Chat.Translation;
+using DbMercado.Infrastructure.Chat.UnitsOfWork;
 using DbMercado.Infrastructure.Administracao.Services;
 using DbMercado.Infrastructure.Administracao.Services.Autenticacao;
 using DbMercado.Infrastructure.Administracao.UnitsOfWork;
@@ -24,12 +35,17 @@ using DbMercado.Infrastructure.Produto.UnitsOfWork;
 using DbMercado.Infrastructure.Shared.Repositories;
 using DbMercado.Infrastructure.Providers.Logging;
 using DbMercado.Infrastructure.Providers.CEP;
+using DbMercado.Application.Shared.Interfaces;
 using DbMercado.Infrastructure.Shared.Data;
+using DbMercado.Infrastructure.Shared.Security;
 using DbMercado.Infrastructure.Shared.HTTP;
 using DbMercado.Infrastructure.Shared.Interfaces;
 using DbMercado.Infrastructure.Jobs.DependencyInjection;
 using DeepBlues.Infrastructure.Providers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using DbMercado.Api.Authorization;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -37,10 +53,14 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
+using System.IO;
+using System.Reflection;
 using Microsoft.OpenApi.Models;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Threading.Channels;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -54,6 +74,8 @@ if (string.IsNullOrWhiteSpace(connectionString))
 ApplicationSettings.DataBase.SetConnectionString(connectionString);
 
 #region Banco de Dados (Infrastructure)
+
+builder.Services.AddSingleton<IEncryptionService, AesEncryptionService>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
@@ -108,7 +130,20 @@ builder.Services.AddHttpClient("BrasilApi", client =>
 .AddPolicyHandler(HttpPolicies.RetryPolicy())
 .AddPolicyHandler(HttpPolicies.CircuitBreakerPolicy());
 
+builder.Services.Configure<OpenRouterOptions>(
+    builder.Configuration.GetSection(OpenRouterOptions.SectionName));
 
+builder.Services.AddHttpClient(OpenRouterTranslationService.HttpClientName, client =>
+{
+    client.BaseAddress = new Uri("https://openrouter.ai/api/v1/");
+    client.Timeout = TimeSpan.FromMinutes(2);
+})
+.AddPolicyHandler((sp, _) =>
+{
+    var lf = sp.GetRequiredService<ILoggerFactory>();
+    var log = lf.CreateLogger("DbMercado.OpenRouter.HttpRetry");
+    return HttpPolicies.OpenRouterTranslationRetryPolicy(log);
+});
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -182,6 +217,22 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = jwtSettings.Audience,
         ClockSkew = TimeSpan.Zero
     };
+    options.Events = new JwtBearerEvents
+    {
+        // SignalR WebSocket: o cliente envia JWT em access_token na query (header Authorization não acompanha o upgrade).
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) &&
+                path.StartsWithSegments(ChatHubRoute.Path))
+            {
+                context.Token = accessToken;
+            }
+
+            return Task.CompletedTask;
+        }
+    };
 });
 
 #endregion Autenticação JWT
@@ -197,6 +248,9 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("CanRead", policy => policy.RequireClaim("NivelAcesso"));
     options.AddPolicy("CanViewLogs", policy => policy.RequireClaim("NivelAcesso", ((int)DbMercado.Domain.Shared.ApplicationSettings.ClaimApp.NivelAcesso.Administrador).ToString()));
     options.AddPolicy("CanManageMenus", policy => policy.RequireClaim("NivelAcesso", ((int)DbMercado.Domain.Shared.ApplicationSettings.ClaimApp.NivelAcesso.Administrador).ToString()));
+
+    options.AddPolicy(ChatMultilingueAcessarRequirement.PolicyName, policy =>
+        policy.Requirements.Add(new ChatMultilingueAcessarRequirement()));
 });
 
 // Com fetch credentials: 'include' no React, não pode usar AllowAnyOrigin (*).
@@ -254,6 +308,16 @@ builder.Services.AddProblemDetails();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddMemoryCache();
 
+builder.Services.AddSingleton<IUserIdProvider, ChatUserIdProvider>();
+builder.Services.AddSignalR().AddJsonProtocol(options =>
+{
+    options.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    options.PayloadSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
+    options.PayloadSerializerOptions.Converters.Add(
+        new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+});
+builder.Services.AddScoped<IChatConviteRealtimeNotifier, ChatConviteSignalRNotifier>();
+
 #endregion Add services to the container.
 
 
@@ -277,6 +341,25 @@ builder.Services.AddScoped<DbInitializer>();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Minha API .NET 9", Version = "v1" });
+
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+    {
+        c.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
+    }
+
+    c.TagActionsBy(api =>
+    {
+        var controller = api.ActionDescriptor.RouteValues.TryGetValue("controller", out var cn)
+            ? cn
+            : "API";
+        return controller switch
+        {
+            "ChatRooms" or "ChatInvites" or "ChatMembers" => new[] { "Chat multilíngue" },
+            _ => new[] { controller! }
+        };
+    });
 
     // Define o esquema de seguran?a (Bearer Token)
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -319,6 +402,7 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddScoped<IUwAdministracao, UwAdministracao>();
 builder.Services.AddScoped<IUwImportacao, UwImportacao>();
 builder.Services.AddScoped<IUwProduto, UwProduto>();
+builder.Services.AddScoped<IUwChat, UwChat>();
 
 #endregion Injeção de dependância de repositários
 
@@ -370,9 +454,29 @@ builder.Services.AddScoped<IMidiaArquivoStorage, MidiaArquivoStorage>();
 builder.Services.AddScoped<IMidiaService, MidiaService>();
 
 builder.Services.AddScoped<IPermissaoUsuarioResolver, PermissaoUsuarioResolver>();
+builder.Services.AddScoped<IAuthorizationHandler, ChatMultilingueAcessarHandler>();
 builder.Services.AddScoped<IAppLogBackupStoragePaths, AppLogBackupStoragePaths>();
 builder.Services.AddScoped<IAppLogService, AppLogService>();
 builder.Services.AddScoped<IJobExecucaoAdministracaoService, JobExecucaoAdministracaoService>();
+builder.Services.AddScoped<IChatSalaService, ChatSalaService>();
+builder.Services.AddScoped<IChatConviteService, ChatConviteService>();
+builder.Services.AddScoped<IChatMembroService, ChatMembroService>();
+builder.Services.AddScoped<IChatMensagemService, ChatMensagemService>();
+builder.Services.AddSingleton<IChatMensagemEnvioRateLimiter, ChatMensagemEnvioRateLimiter>();
+builder.Services.AddSingleton<ITranslationCache, InMemoryTranslationCache>();
+builder.Services.AddSingleton<IOpenRouterTranslationService, OpenRouterTranslationService>();
+
+var translationJobsChannel = Channel.CreateBounded<TranslationJob>(
+    new BoundedChannelOptions(5000)
+    {
+        FullMode = BoundedChannelFullMode.Wait,
+        SingleReader = true,
+        SingleWriter = false
+    });
+builder.Services.AddSingleton(translationJobsChannel);
+builder.Services.AddSingleton(translationJobsChannel.Reader);
+builder.Services.AddSingleton(translationJobsChannel.Writer);
+builder.Services.AddHostedService<TranslationWorker>();
 
 #endregion Injeção de dependência de serviços
 
@@ -410,6 +514,7 @@ app.UseStaticFiles();
 app.UseAuthentication();  // Deve vir antes de UseAuthorization para validar o JWT
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<ChatHub>(ChatHubRoute.Path);
 
 if (app.Environment.IsDevelopment())
 {

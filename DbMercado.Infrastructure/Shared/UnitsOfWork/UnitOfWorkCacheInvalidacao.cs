@@ -1,4 +1,5 @@
 using DbMercado.Domain.Administracao.Entities;
+using DbMercado.Domain.Chat.Entities;
 using DbMercado.Domain.Importacao.Entities;
 using DbMercado.Domain.Produto.Entities;
 using DbMercado.Infrastructure.Shared.Interfaces;
@@ -44,5 +45,16 @@ public static class UnitOfWorkCacheInvalidacao
         f.GetApplicationCaching<NotaFiscalEntity>().InvalidateEntity();
         f.GetApplicationCaching<ItemNotaFiscalEntity>().InvalidateEntity();
         f.GetApplicationCaching<ProdutoImportadoEntity>().InvalidateEntity();
+    }
+
+    /// <summary>Entidades da UoW Chat: salas, membros, convites, mensagens, traduções e recibos.</summary>
+    public static void Chat(IApplicationCachingFactory f)
+    {
+        f.GetApplicationCaching<ChatRoomEntity>().InvalidateEntity();
+        f.GetApplicationCaching<ChatMemberEntity>().InvalidateEntity();
+        f.GetApplicationCaching<ChatInviteEntity>().InvalidateEntity();
+        f.GetApplicationCaching<MessageEntity>().InvalidateEntity();
+        f.GetApplicationCaching<MessageTranslationEntity>().InvalidateEntity();
+        f.GetApplicationCaching<MessageReceiptEntity>().InvalidateEntity();
     }
 }

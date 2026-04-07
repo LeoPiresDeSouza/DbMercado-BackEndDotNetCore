@@ -1,4 +1,6 @@
+using DbMercado.Application.Shared.Interfaces;
 using DbMercado.Domain.Administracao.Entities;
+using DbMercado.Domain.Chat.Entities;
 using DbMercado.Domain.Importacao.Entities;
 using DbMercado.Domain.Produto.Entities;
 using DbMercado.Domain.Shared.Entities;
@@ -13,12 +15,12 @@ namespace DbMercado.Infrastructure.Shared.Data;
 
 public class AppDbContext: IdentityDbContext<IdentityUser>
 {
-    public AppDbContext()
-    {
-    }
+    private readonly IEncryptionService _chatFieldEncryption;
 
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    public AppDbContext(DbContextOptions<AppDbContext> options, IEncryptionService chatFieldEncryption)
+        : base(options)
     {
+        _chatFieldEncryption = chatFieldEncryption;
     }
 
     public DbSet<AppLogEntity> AppLogEntries => Set<AppLogEntity>();
@@ -46,8 +48,12 @@ public class AppDbContext: IdentityDbContext<IdentityUser>
     public DbSet<CategoriaProdutoEntity> CategoriasProduto => Set<CategoriaProdutoEntity>();
     public DbSet<MidiaEntity> MidiasProduto => Set<MidiaEntity>();
 
-    
-
+    public DbSet<ChatRoomEntity> ChatRooms => Set<ChatRoomEntity>();
+    public DbSet<ChatMemberEntity> ChatMembers => Set<ChatMemberEntity>();
+    public DbSet<ChatInviteEntity> ChatInvites => Set<ChatInviteEntity>();
+    public DbSet<MessageEntity> Messages => Set<MessageEntity>();
+    public DbSet<MessageTranslationEntity> MessageTranslations => Set<MessageTranslationEntity>();
+    public DbSet<MessageReceiptEntity> MessageReceipts => Set<MessageReceiptEntity>();
 
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -71,6 +77,15 @@ public class AppDbContext: IdentityDbContext<IdentityUser>
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+
+        var encryptedText = new EncryptedStringValueConverter(_chatFieldEncryption);
+        modelBuilder.Entity<MessageEntity>()
+            .Property(e => e.ContentOriginal)
+            .HasConversion(encryptedText);
+        modelBuilder.Entity<MessageTranslationEntity>()
+            .Property(e => e.TranslatedText)
+            .HasConversion(encryptedText);
+
         ConfigureOptimisticConcurrency(modelBuilder);
     }
 

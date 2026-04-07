@@ -36,4 +36,18 @@ public static class ClaimsPrincipalAuditoriaExtensions
             ? ApplicationSettings.Application.AnonymousUser
             : nome;
     }
+
+    /// <summary>ID do usuário no ASP.NET Identity (<c>AspNetUsers.Id</c>), a partir do JWT.</summary>
+    public static string? ResolveUserId(this ClaimsPrincipal? user)
+    {
+        var id = user?.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!string.IsNullOrWhiteSpace(id))
+            return id;
+
+        id = user?.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (!string.IsNullOrWhiteSpace(id))
+            return id;
+
+        return user?.FindFirstValue("sub");
+    }
 }

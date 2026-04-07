@@ -1,3 +1,4 @@
+using DbMercado.Infrastructure.Shared.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -35,6 +36,7 @@ public sealed class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbConte
             .ConfigureWarnings(w => w.Ignore(CoreEventId.RowLimitingOperationWithoutOrderByWarning))
             .Options;
 
-        return new AppDbContext(options);
+        var encryption = new AesEncryptionService(configuration);
+        return new AppDbContext(options, encryption);
     }
 }
